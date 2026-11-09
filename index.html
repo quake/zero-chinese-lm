@@ -126,7 +126,7 @@ details.fold[open] summary{margin-bottom:8px}
         </div>
       </div>
       <div class="prompt-row">
-        <input id="promptInput" value="小狐狸来到森林里。" maxlength="40" placeholder="输入中文 Prompt">
+        <input id="promptInput" value="从前有座山，" maxlength="40" placeholder="输入中文 Prompt">
         <button id="btnGen" title="用当前模型续写">用当前模型续写</button>
         <button id="btnSnap" title="保存这一次生成结果">保存快照</button>
         <button id="btnResetPrompt" title="恢复默认 Prompt">默认</button>
@@ -244,7 +244,8 @@ details.fold[open] summary{margin-bottom:8px}
         <div class="slider"><label>生成长度</label><input id="hpGenLen" type="range" min="8" max="120" step="4" value="48"><output id="hpGenLenOut"></output></div>
         <div class="slider"><label>生成间隔</label><input id="hpSampleInt" type="range" min="5" max="100" step="5" value="20"><output id="hpSampleIntOut"></output></div>
         <div class="slider"><label>验证间隔</label><input id="hpValInt" type="range" min="5" max="100" step="5" value="25"><output id="hpValIntOut"></output></div>
-        <div class="slider"><label>课程总步数</label><input id="hpTotal" type="range" min="400" max="6000" step="100" value="1500"><output id="hpTotalOut"></output></div>
+        <div class="slider"><label>课程总步数</label><input id="hpTotal" type="range" min="400" max="12000" step="100" value="6000"><output id="hpTotalOut"></output></div>
+        <div class="slider"><label>阶段长度</label><input id="hpStageLen" type="range" min="100" max="3000" step="50" value="500"><output id="hpStageLenOut"></output></div>
       </div>
       <div class="tiny dim" style="margin-top:6px">修改 Batch Size / 课程总步数 只影响之后的训练；LR 会立即生效于下一次参数更新。</div>
     </section>
@@ -816,7 +817,7 @@ function Trainer(opts){
   this.hp = {
     lr: 0.0025, batchSize: 6, temperature: 0.85, topK: 0,
     genLength: 48, valInterval: 25, sampleInterval: 20, autosaveInterval: 100,
-    totalSteps: 1500, stageLength: 350, gradClip: 1.0, weightDecay: 0.05, minLrRatio: 0.1, warmupSteps: 40,
+    totalSteps: 6000, stageLength: 500, gradClip: 1.0, weightDecay: 0.05, minLrRatio: 0.1, warmupSteps: 40,
     dropout: 0.1
   };
   this.curriculum = { mode: 'auto', stage: 0, weights: CURRICULUM_PRESETS[0].slice() };
@@ -1207,7 +1208,7 @@ Trainer.prototype.status = function(){
 
 /* ============================== 内置中文分级语料 ============================== */
 var CORPUS = {
-  version: 'zlm-corpus-2',
+  version: 'zlm-corpus-3',
   levels: [
     { id: 'L1', name: '启蒙识字', docs: [
     "小猫喜欢吃鱼。它也喜欢喝牛奶。",
@@ -1342,6 +1343,12 @@ var CORPUS = {
     "今天我和同学一起做值日。我擦桌子，他扫地。做完以后，教室很干净。",
     "小狗跑得太快了，一下子撞到了树上。它坐下来，摇了摇脑袋，然后又跑开了。",
     "我喜欢早上出门的时候看一看天。如果天很蓝，我就知道今天会是一个好天气。",
+    "从前有座山，山里有座庙，庙里有个老和尚，正在给小和尚讲故事。他讲的是：从前有座山，山里有座庙，庙里有个老和尚……",
+    "从前有座山，山上长满了树。山下有一条小河，河水很清，能看见水底的石头。",
+    "从前有座山，山里住着一只小狐狸。它每天早上都到山顶上去看太阳。",
+    "从前有座山，山上有座庙。庙里的老和尚每天都在院子里扫地，扫完了就坐下来念经。",
+    "从前有座山，山里有一片竹林。风一吹，竹叶就沙沙地响，像有人在说话。",
+    "从前有座山，山顶上有一块很大的石头。村里的人说，那块石头是从天上掉下来的。",
     "小狐狸来到森林里。它看见了很多树，也看见了一条小河。它喝了一点水，又往前走了。",
     "小狐狸来到森林里。它走了一整天，肚子有点饿了。后来它找到几颗果子，吃得很饱。",
     "小狐狸来到森林里。它遇见了一只小兔子。小兔子问它从哪里来，它说自己也不知道。",
@@ -2756,7 +2763,7 @@ var trainer = null;
 var running = false;
 var timer = null;
 var step0 = null;
-var currentPrompt = '小狐狸来到森林里。';
+var currentPrompt = '从前有座山，';
 var lastGenStep = -1, lastValStep = -1, lastSaveStep = -1;
 var lastTickTime = 0, tickTokens = 0, tpsEma = 0, sentHist = 0;
 
@@ -3000,7 +3007,7 @@ self.onmessage = function(ev){
 (function(){
 'use strict';
 
-var DEFAULT_PROMPT = '小狐狸来到森林里。';
+var DEFAULT_PROMPT = '从前有座山，';
 var ARCHS = {
   teach: { nLayer: 2, nHead: 4, dModel: 64, ctx: 64 },
   adv: { nLayer: 3, nHead: 4, dModel: 96, ctx: 128 }
@@ -3024,7 +3031,7 @@ var el = {};
  'btnStart','btnPause','btnStep','btnReset','badgeState','badgeSave','paramCount','vocabSize','corpusVer',
  'stageBar','stageName','stageProg','curMode','curStage','weightSliders','levelTokenInfo',
  'hpLr','hpLrOut','hpBatch','hpBatchOut','hpTemp','hpTempOut','hpGenLen','hpGenLenOut','hpSampleInt','hpSampleIntOut','hpDrop','hpDropOut',
- 'hpValInt','hpValIntOut','hpTotal','hpTotalOut','archSel','btnExport','btnImport','fileInput','ckptInfo',
+ 'hpValInt','hpValIntOut','hpTotal','hpTotalOut','hpStageLen','hpStageLenOut','archSel','btnExport','btnImport','fileInput','ckptInfo',
  'milestones','snapshots','corpusInfo','toast','modalHost'
 ].forEach(function(id){ el[id] = $(id); });
 
@@ -3471,6 +3478,7 @@ function syncHp(hp){
   el.hpSampleInt.value = hp.sampleInterval;
   el.hpValInt.value = hp.valInterval;
   el.hpTotal.value = hp.totalSteps;
+  el.hpStageLen.value = hp.stageLength;
   el.hpLrOut.textContent = hp.lr.toFixed(4);
   el.hpDropOut.textContent = hp.dropout.toFixed(2);
   el.hpBatchOut.textContent = hp.batchSize;
@@ -3479,6 +3487,7 @@ function syncHp(hp){
   el.hpSampleIntOut.textContent = hp.sampleInterval;
   el.hpValIntOut.textContent = hp.valInterval;
   el.hpTotalOut.textContent = hp.totalSteps;
+  el.hpStageLenOut.textContent = hp.stageLength;
 }
 function renderLevelBoxes(perLevel){
   if (!perLevel) return;
@@ -3827,8 +3836,11 @@ function bind(){
   el.hpValInt.oninput = function(){ el.hpValIntOut.textContent = el.hpValInt.value; post({ type: 'hp', patch: { valInterval: +el.hpValInt.value } }); };
   el.hpTotal.oninput = function(){
     el.hpTotalOut.textContent = el.hpTotal.value;
-    var total = +el.hpTotal.value;
-    post({ type: 'hp', patch: { totalSteps: total, stageLength: Math.round(total / 4) } });
+    post({ type: 'hp', patch: { totalSteps: +el.hpTotal.value } });
+  };
+  el.hpStageLen.oninput = function(){
+    el.hpStageLenOut.textContent = el.hpStageLen.value;
+    post({ type: 'hp', patch: { stageLength: +el.hpStageLen.value } });
   };
 
   el.btnExport.onclick = function(){ post({ type: 'checkpoint' }); };
