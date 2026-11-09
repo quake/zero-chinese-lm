@@ -1,0 +1,2685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>中文语言模型训练实验室</title>
+<style>
+:root{--bg:#0b0f17;--panel:#131a26;--panel2:#1a2434;--line:#243147;--txt:#dbe4f0;--dim:#8a9ab0;--acc:#4fd1c5;--acc2:#7aa2ff;--warn:#f6ad55;--bad:#fc8181;--ok:#68d391}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",system-ui,sans-serif;font-size:14px}
+body{padding:0 0 40px}
+h1,h2,h3{margin:0;font-weight:600}
+button{font:inherit;color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--acc);color:#fff}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:linear-gradient(180deg,#2b6f6a,#1f5b57);border-color:#2f8f88}
+button.primary:hover:not(:disabled){background:linear-gradient(180deg,#338079,#256b66)}
+input,select{font:inherit;color:var(--txt);background:#0e1420;border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+input[type=range]{padding:0;accent-color:var(--acc)}
+canvas{display:block;width:100%}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.dim{color:var(--dim)}
+.small{font-size:12px}
+.tiny{font-size:11px}
+header{position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:12px 18px;background:rgba(11,15,23,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+header .brand{display:flex;align-items:baseline;gap:10px}
+header .brand b{font-size:16px;letter-spacing:.5px}
+.kpis{display:flex;gap:18px;flex-wrap:wrap;margin-left:auto}
+.kpi{display:flex;flex-direction:column;line-height:1.25}
+.kpi span{font-size:11px;color:var(--dim)}
+.kpi b{font-size:15px;font-variant-numeric:tabular-nums}
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:16px 18px;align-items:start}
+@media(max-width:1180px){main{grid-template-columns:minmax(0,1fr)}}
+section.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+section.panel h2{font-size:14px;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+section.panel h2 .tag{font-size:11px;color:var(--dim);font-weight:400}
+.gen-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+@media(max-width:760px){.gen-grid{grid-template-columns:1fr}}
+.gen-box{background:#0d131d;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:120px}
+.gen-box .lbl{font-size:11px;color:var(--dim);margin-bottom:6px;display:flex;justify-content:space-between}
+.gen-box .txt{font-size:16px;line-height:1.7;word-break:break-all;white-space:pre-wrap}
+.gen-box .txt .p{color:var(--acc)}
+.prompt-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.prompt-row input{flex:1;min-width:220px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:12px}
+@media(max-width:760px){.sliders{grid-template-columns:1fr}}
+.slider{display:grid;grid-template-columns:88px 1fr 58px;align-items:center;gap:8px}
+.slider label{font-size:12px;color:var(--dim)}
+.slider output{font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.chart-wrap{position:relative;margin-top:8px}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin-top:4px}
+.chart-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
+.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+@media(max-width:760px){.levels{grid-template-columns:1fr 1fr}}
+.lv{background:#0d131d;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.lv .name{font-size:12px;color:var(--dim)}
+.lv .val{font-size:17px;font-variant-numeric:tabular-nums}
+.lv .w{font-size:11px;color:var(--dim)}
+.lv.active{border-color:var(--acc);box-shadow:0 0 0 1px rgba(79,209,197,.25) inset}
+.stagebar{display:flex;gap:6px;margin-top:10px}
+.stagebar .st{flex:1;height:6px;border-radius:3px;background:#1e2838;position:relative;overflow:hidden}
+.stagebar .st i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#2f8f88,#4fd1c5)}
+.viz-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:980px){.viz-grid{grid-template-columns:1fr}}
+#attnCanvas{image-rendering:pixelated;border-radius:8px;background:#0d131d}
+.attn-labels{font-size:10px;color:var(--dim);word-break:break-all;line-height:1.35;margin-top:4px}
+.milestones{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px}
+.milestones li{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--dim)}
+.milestones li.on{color:var(--txt)}
+.milestones li .dot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#2a3a52;margin-top:5px}
+.milestones li.on .dot{background:var(--ok);box-shadow:0 0 6px rgba(104,211,145,.6)}
+.snapshots{display:grid;gap:6px;margin-top:8px;max-height:220px;overflow:auto}
+.snap{background:#0d131d;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.5}
+.snap b{color:var(--acc);font-weight:500}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.sep{height:1px;background:var(--line);margin:12px 0}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--dim)}
+.field select,.field input{color:var(--txt)}
+.toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);cursor:pointer}
+.badge{font-size:11px;padding:1px 7px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
+.badge.ok{color:var(--ok);border-color:rgba(104,211,145,.4)}
+.badge.warn{color:var(--warn);border-color:rgba(246,173,85,.4)}
+.badge.bad{color:var(--bad);border-color:rgba(252,129,129,.4)}
+#toast{position:fixed;right:18px;bottom:18px;z-index:50;display:grid;gap:8px;max-width:380px}
+#toast div{background:#1b2534;border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:8px;padding:9px 12px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:tin .18s ease-out}
+#toast div.err{border-left-color:var(--bad)}
+#toast div.warn{border-left-color:var(--warn)}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+details.fold{background:#0d131d;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-top:10px}
+details.fold summary{cursor:pointer;font-size:12px;color:var(--dim)}
+details.fold[open] summary{margin-bottom:8px}
+.modal-bg{position:fixed;inset:0;background:rgba(4,7,12,.72);display:flex;align-items:center;justify-content:center;z-index:60}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;max-width:520px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal h3{margin-bottom:8px;font-size:16px}
+.modal p{color:var(--dim);font-size:13px;line-height:1.6;margin:6px 0 14px}
+.modal .controls{justify-content:flex-end}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b>中文语言模型训练实验室</b><span class="dim small">从随机参数开始，观察 AI 学习中文</span></div>
+  <div class="kpis">
+    <div class="kpi"><span>训练步数 Step</span><b id="kpiStep">0</b></div>
+    <div class="kpi"><span>训练损失 Train Loss</span><b id="kpiLoss">–</b></div>
+    <div class="kpi"><span>验证损失 Val Loss</span><b id="kpiVal">–</b></div>
+    <div class="kpi"><span>学习率 LR</span><b id="kpiLr">–</b></div>
+    <div class="kpi"><span>速度 tok/s</span><b id="kpiTps">–</b></div>
+    <div class="kpi"><span>状态</span><b id="kpiState">初始化</b></div>
+  </div>
+</header>
+
+<main>
+  <div>
+    <section class="panel" id="panelGen">
+      <h2>训练前后对比 <span class="tag">同一个 Prompt，真实模型推理</span></h2>
+      <div class="gen-grid">
+        <div class="gen-box">
+          <div class="lbl"><span>Before Training · Step 0（随机初始化）</span><span id="beforeMeta" class="tiny"></span></div>
+          <div class="txt" id="beforeText">–</div>
+        </div>
+        <div class="gen-box">
+          <div class="lbl"><span>Current Model · <span id="curStep">Step 0</span></span><span id="curMeta" class="tiny"></span></div>
+          <div class="txt" id="curText">–</div>
+        </div>
+      </div>
+      <div class="prompt-row">
+        <input id="promptInput" value="小狐狸来到森林里。" maxlength="40" placeholder="输入中文 Prompt">
+        <button id="btnGen" title="用当前模型续写">用当前模型续写</button>
+        <button id="btnSnap" title="保存这一次生成结果">保存快照</button>
+        <button id="btnResetPrompt" title="恢复默认 Prompt">默认</button>
+      </div>
+      <div class="tiny dim" style="margin-top:6px">续写由当前模型逐字采样得到；温度越低越保守。Step 0 的结果在训练开始前用同一 Prompt 生成，作为对照。</div>
+    </section>
+
+    <section class="panel">
+      <h2>训练曲线 <span class="tag">数据来自真实训练 / 独立验证集</span></h2>
+      <div class="chart-wrap"><canvas id="lossChart" height="230"></canvas></div>
+      <div class="chart-wrap"><canvas id="hpChart" height="110"></canvas></div>
+      <div class="chart-legend">
+        <span><i style="background:#4fd1c5"></i>Training Loss</span>
+        <span><i style="background:#7aa2ff"></i>Validation Loss（四级平均）</span>
+        <span><i style="background:#f6ad55"></i>Learning Rate（右轴）</span>
+        <span><i style="background:#b794f4"></i>Throughput tok/s（右轴）</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>分级验证损失 <span class="tag">检验是否遗忘已学过的简单规律</span></h2>
+      <div class="levels" id="levelBoxes"></div>
+      <div class="chart-wrap"><canvas id="levelChart" height="180"></canvas></div>
+      <div class="tiny dim" style="margin-top:6px">每个级别使用独立的验证文本（不参与训练）。当模型进入新阶段后，如果简单级别的验证损失开始上升，说明它在遗忘。</div>
+    </section>
+
+    <div class="viz-grid">
+      <section class="panel">
+        <h2>Attention 可视化 <span class="tag">当前 Prompt 的真实注意力</span></h2>
+        <div class="row" style="margin:8px 0">
+          <div class="field"><label>Layer</label><select id="attnLayer"></select></div>
+          <div class="field"><label>Head</label><select id="attnHead"></select></div>
+          <button id="btnAttn" style="align-self:flex-end">重新计算</button>
+        </div>
+        <canvas id="attnCanvas" height="300"></canvas>
+        <div class="attn-labels" id="attnLabels"></div>
+        <div class="tiny dim" style="margin-top:6px">每一行是当前位置对之前位置的注意力权重（因果掩码：只能看左边）。颜色越亮权重越大。</div>
+      </section>
+      <section class="panel">
+        <h2>Embedding 可视化 <span class="tag">PCA 投影到二维</span></h2>
+        <div class="row" style="margin:8px 0">
+          <div class="field"><label>显示汉字数</label><select id="embLimit">
+            <option value="80">80</option><option value="120" selected>120</option><option value="200">200</option>
+          </select></div>
+          <button id="btnEmb" style="align-self:flex-end">刷新</button>
+        </div>
+        <canvas id="embCanvas" height="300"></canvas>
+        <div class="tiny dim" style="margin-top:6px">取训练语料中出现频率最高的汉字，用它们当前 Embedding 的主成分投影。训练越久，相关汉字的距离往往越接近。</div>
+      </section>
+    </div>
+  </div>
+
+  <div>
+    <section class="panel">
+      <h2>训练控制</h2>
+      <div class="row" style="margin-top:8px">
+        <button id="btnStart" class="primary">开始训练</button>
+        <button id="btnPause">暂停</button>
+        <button id="btnStep">单步</button>
+        <button id="btnReset">重置</button>
+      </div>
+      <div class="row" style="margin-top:10px;gap:10px">
+        <span class="badge" id="badgeState">初始化中</span>
+        <span class="badge" id="badgeSave">自动保存：–</span>
+      </div>
+      <div class="sep"></div>
+      <div class="row between tiny dim">
+        <span>模型参数 <b id="paramCount">–</b></span>
+        <span>词表 <b id="vocabSize">–</b></span>
+        <span>语料版本 <b id="corpusVer">–</b></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>课程进度 <span class="tag">Curriculum Learning</span></h2>
+      <div class="stagebar" id="stageBar"></div>
+      <div class="row between" style="margin-top:8px">
+        <span class="small">当前阶段：<b id="stageName">–</b></span>
+        <span class="tiny dim" id="stageProg">–</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label>推进方式</label>
+          <select id="curMode"><option value="auto">自动（按 Step）</option><option value="manual">手动选择</option></select>
+        </div>
+        <div class="field"><label>阶段</label>
+          <select id="curStage">
+            <option value="0">1 · 启蒙识字</option><option value="1">2 · 小学语文</option>
+            <option value="2">3 · 初中语文</option><option value="4" disabled hidden>–</option><option value="3">4 · 高中语文</option>
+          </select>
+        </div>
+      </div>
+      <div class="sliders" id="weightSliders" style="grid-template-columns:1fr"></div>
+      <div class="tiny dim" style="margin-top:6px">采样比例按 Batch 内逐条样本加权，不是把语料拼接。切换阶段不会重置模型或优化器状态。</div>
+      <div class="sep"></div>
+      <div class="tiny dim" id="levelTokenInfo">已采样 Token：–</div>
+    </section>
+
+    <section class="panel">
+      <h2>训练参数 <span class="tag">普通参数调整不清空模型</span></h2>
+      <div class="row" style="margin-top:8px">
+        <div class="field" style="flex:1"><label>模型配置（改变需要重新开始）</label>
+          <select id="archSel">
+            <option value="teach">教学版 · 2 层 / 隐藏 64 / 4 头 / 上下文 64</option>
+            <option value="adv">进阶版 · 3 层 / 隐藏 96 / 4 头 / 上下文 128</option>
+          </select>
+        </div>
+      </div>
+      <div class="sliders" style="grid-template-columns:1fr">
+        <div class="slider"><label>Learning Rate</label><input id="hpLr" type="range" min="2" max="20" step="1" value="3"><output id="hpLrOut"></output></div>
+        <div class="slider"><label>Dropout</label><input id="hpDrop" type="range" min="0" max="30" step="5" value="15"><output id="hpDropOut"></output></div>
+        <div class="slider"><label>Batch Size</label><input id="hpBatch" type="range" min="1" max="16" step="1" value="8"><output id="hpBatchOut"></output></div>
+        <div class="slider"><label>Temperature</label><input id="hpTemp" type="range" min="20" max="150" step="5" value="85"><output id="hpTempOut"></output></div>
+        <div class="slider"><label>生成长度</label><input id="hpGenLen" type="range" min="8" max="120" step="4" value="48"><output id="hpGenLenOut"></output></div>
+        <div class="slider"><label>生成间隔</label><input id="hpSampleInt" type="range" min="5" max="100" step="5" value="20"><output id="hpSampleIntOut"></output></div>
+        <div class="slider"><label>验证间隔</label><input id="hpValInt" type="range" min="5" max="100" step="5" value="25"><output id="hpValIntOut"></output></div>
+        <div class="slider"><label>课程总步数</label><input id="hpTotal" type="range" min="400" max="6000" step="100" value="1000"><output id="hpTotalOut"></output></div>
+      </div>
+      <div class="tiny dim" style="margin-top:6px">修改 Batch Size / 课程总步数 只影响之后的训练；LR 会立即生效于下一次参数更新。</div>
+    </section>
+
+    <section class="panel">
+      <h2>训练进度保存</h2>
+      <div class="row" style="margin-top:8px">
+        <button id="btnExport">导出训练进度</button>
+        <button id="btnImport">导入训练进度</button>
+        <input id="fileInput" type="file" accept=".json,application/json" class="hidden">
+      </div>
+      <div class="tiny dim" style="margin-top:8px" id="ckptInfo">尚未保存。</div>
+      <div class="tiny dim" style="margin-top:4px">Checkpoint 包含模型权重、AdamW 动量与二阶矩、RNG 状态、课程与历史，可完整复现续训。</div>
+    </section>
+
+    <section class="panel">
+      <h2>学习里程碑 <span class="tag">启发式，仅供参考</span></h2>
+      <ul class="milestones" id="milestones"></ul>
+      <div class="tiny dim" style="margin-top:6px">这些判断来自验证损失与生成文本的简单规则，不代表模型真正具备对应能力。</div>
+    </section>
+
+    <section class="panel">
+      <h2>历史生成快照</h2>
+      <div class="snapshots" id="snapshots"><div class="tiny dim">还没有快照。</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>内置语料</h2>
+      <div id="corpusInfo" class="tiny dim">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>术语说明 <span class="tag">给第一次接触的人</span></h2>
+      <details class="fold" open>
+        <summary>Loss / Token / Attention / Embedding / Curriculum / Checkpoint</summary>
+        <div class="tiny" style="line-height:1.75;color:var(--dim)">
+          <p><b>Token</b>：模型处理的最小单位。这里是单个汉字或标点。词表（Vocab）是模型认识的全部字符。</p>
+          <p><b>Loss</b>：损失，衡量模型预测下一个字有多“意外”。随机猜时约等于 log(词表大小)，越小越好。</p>
+          <p><b>Validation Loss</b>：在没参与训练的文本上算出的损失，用来判断模型是真的学会了，还是只背下了训练文本。</p>
+          <p><b>Attention</b>：注意力。模型在预测下一个字时，会按权重去看前面出现过的字。Heatmap 里每行就是一次“看”的分配。</p>
+          <p><b>Embedding</b>：把每个汉字变成一串数字向量。意思或用法相近的字，向量往往也更接近。</p>
+          <p><b>Curriculum</b>：课程学习。先用简单语料训练，再逐渐混入更难的语料，和人的学习顺序类似。</p>
+          <p><b>Checkpoint</b>：训练进度存档，包含权重、优化器状态、随机数状态和课程设置，可以完整恢复。</p>
+        </div>
+      </details>
+    </section>
+  </div>
+</main>
+<div style="max-width:1180px;margin:0 auto;padding:0 18px 8px;color:var(--dim);font-size:12px;line-height:1.7">
+  <b>关于真实性：</b>页面中的每一个数字、曲线、Attention 权重和生成的汉字，都来自浏览器里这个从随机参数开始训练的小模型，
+  没有任何预置结果。默认教学版只有约 18 万参数、约 2 万字语料，它学到的是汉字与常见字词的统计规律，
+  不能达到真正学生那样的语言能力；“启蒙 / 小学 / 初中 / 高中”只表示训练语料的难度。
+</div>
+<div id="toast"></div>
+<div id="modalHost"></div>
+
+<script id="zlm-worker-src" type="text/plain">
+//<CORE>
+var ZLM = (function(){
+'use strict';
+
+/* ============================== RNG ============================== */
+function makeRng(seed){
+  var s = (seed >>> 0) || 0x9E3779B9;
+  function next(){
+    s = (s + 0x6D2B79F5) >>> 0;
+    var t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  return {
+    state: function(){ return s; },
+    setState: function(v){ s = v >>> 0; },
+    next: next,
+    int: function(n){ return (next() * n) | 0; },
+    normal: function(){
+      var u = next() || 1e-7, v = next();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.283185307179586 * v);
+    }
+  };
+}
+
+/* ============================== kernels ============================== */
+// C[M,N] += A[M,K] @ B[K,N]
+function mm(A, B, C, M, K, N){
+  for (var m = 0; m < M; m++){
+    var aOff = m * K, cOff = m * N;
+    for (var k = 0; k < K; k++){
+      var a = A[aOff + k];
+      if (a === 0) continue;
+      var bOff = k * N;
+      for (var n = 0; n < N; n++) C[cOff + n] += a * B[bOff + n];
+    }
+  }
+}
+// C[M,N] = A[M,K] @ B[N,K]^T   (C is overwritten)
+function mmABt(C, A, B, M, K, N){
+  for (var m = 0; m < M; m++){
+    var aOff = m * K, cOff = m * N;
+    for (var n = 0; n < N; n++){
+      var bOff = n * K, acc = 0;
+      for (var k = 0; k < K; k++) acc += A[aOff + k] * B[bOff + k];
+      C[cOff + n] = acc;
+    }
+  }
+}
+// C[K,N] += A[M,K]^T @ B[M,N]
+function mmAtB(A, B, C, M, K, N){
+  for (var m = 0; m < M; m++){
+    var aOff = m * K, bOff = m * N;
+    for (var k = 0; k < K; k++){
+      var a = A[aOff + k];
+      if (a === 0) continue;
+      var cOff = k * N;
+      for (var n = 0; n < N; n++) C[cOff + n] += a * B[bOff + n];
+    }
+  }
+}
+function addBias(C, M, N, b){
+  for (var m = 0; m < M; m++){
+    var off = m * N;
+    for (var n = 0; n < N; n++) C[off + n] += b[n];
+  }
+}
+function addBiasGrad(b, dC, M, N){
+  for (var m = 0; m < M; m++){
+    var off = m * N;
+    for (var n = 0; n < N; n++) b[n] += dC[off + n];
+  }
+}
+function zero(arr, n){ for (var i = 0; i < n; i++) arr[i] = 0; }
+function gelu(x){
+  var c = 0.7978845608028654, x3 = x * x * x;
+  return 0.5 * x * (1 + Math.tanh(c * (x + 0.044715 * x3)));
+}
+function geluGrad(x){
+  var c = 0.7978845608028654, x2 = x * x, x3 = x2 * x;
+  var t = Math.tanh(c * (x + 0.044715 * x3));
+  return 0.5 * (1 + t) + 0.5 * x * c * (1 + 3 * 0.044715 * x2) * (1 - t * t);
+}
+// LayerNorm over rows of length D. xhat (optional) caches the normalized input,
+// because the residual stream is updated in place before backward runs.
+function lnForward(X, g, b, Y, mean, rstd, N, D, xhat){
+  var eps = 1e-5;
+  for (var n = 0; n < N; n++){
+    var off = n * D, mu = 0, i;
+    for (i = 0; i < D; i++) mu += X[off + i];
+    mu /= D;
+    var vr = 0;
+    for (i = 0; i < D; i++){ var d = X[off + i] - mu; vr += d * d; }
+    vr /= D;
+    var rs = 1 / Math.sqrt(vr + eps);
+    mean[n] = mu; rstd[n] = rs;
+    for (i = 0; i < D; i++){
+      var xh = (X[off + i] - mu) * rs;
+      if (xhat) xhat[off + i] = xh;
+      Y[off + i] = xh * g[i] + b[i];
+    }
+  }
+}
+// xhat must be the normalized input cached by lnForward.
+function lnBackward(xhat, dY, g, dX, dG, dB, rstd, N, D){
+  for (var n = 0; n < N; n++){
+    var off = n * D, rs = rstd[n], i;
+    var m1 = 0, m2 = 0;
+    for (i = 0; i < D; i++){
+      var dy = g[i] * dY[off + i];
+      m1 += dy; m2 += dy * xhat[off + i];
+    }
+    m1 /= D; m2 /= D;
+    for (i = 0; i < D; i++){
+      var xh = xhat[off + i], dy2 = g[i] * dY[off + i];
+      dX[off + i] = rs * (dy2 - m1 - xh * m2);
+      dG[i] += dY[off + i] * xh;
+      dB[i] += dY[off + i];
+    }
+  }
+}
+
+/* ============================== Model ============================== */
+function Model(cfg, rng){
+  var D = cfg.dModel, L = cfg.nLayer, H = cfg.nHead, V = cfg.vocab, F = 4 * D;
+  this.cfg = { nLayer: L, nHead: H, dModel: D, ctx: cfg.ctx, vocab: V };
+  this.D = D; this.L = L; this.H = H; this.HD = D / H; this.V = V; this.F = F; this.ctx = cfg.ctx;
+  this.params = [];
+  this.ws = null;
+  var self = this;
+  var useF64 = cfg.dtype === 'f64';
+  this.alloc = useF64 ? function(n){ return new Float64Array(n); } : function(n){ return new Float32Array(n); };
+  function P(name, rows, cols, init){
+    var n = rows * cols, data = self.alloc(n), i;
+    if (init === 'normal'){ for (i = 0; i < n; i++) data[i] = rng.normal() * 0.02; }
+    else if (init === 'one'){ for (i = 0; i < n; i++) data[i] = 1; }
+    var p = { name: name, data: data, grad: self.alloc(n), m: self.alloc(n), v: self.alloc(n), decay: rows > 1 };
+    self.params.push(p);
+    return p;
+  }
+  this.wte = P('wte', V, D, 'normal');
+  this.wpe = P('wpe', cfg.ctx, D, 'normal');
+  this.layers = [];
+  for (var l = 0; l < L; l++){
+    this.layers.push({
+      ln1g: P('l' + l + '.ln1.g', 1, D, 'one'), ln1b: P('l' + l + '.ln1.b', 1, D, 'zero'),
+      wqkv: P('l' + l + '.qkv.w', D, 3 * D, 'normal'), bqkv: P('l' + l + '.qkv.b', 1, 3 * D, 'zero'),
+      wo: P('l' + l + '.o.w', D, D, 'normal'), bo: P('l' + l + '.o.b', 1, D, 'zero'),
+      ln2g: P('l' + l + '.ln2.g', 1, D, 'one'), ln2b: P('l' + l + '.ln2.b', 1, D, 'zero'),
+      w1: P('l' + l + '.f1.w', D, F, 'normal'), b1: P('l' + l + '.f1.b', 1, F, 'zero'),
+      w2: P('l' + l + '.f2.w', F, D, 'normal'), b2: P('l' + l + '.f2.b', 1, D, 'zero')
+    });
+  }
+  this.lnfg = P('lnf.g', 1, D, 'one');
+  this.lnfb = P('lnf.b', 1, D, 'zero');
+  this.paramCount = this.params.reduce(function(a, p){ return a + p.data.length; }, 0);
+}
+
+Model.prototype.ensure = function(B, T){
+  var ws = this.ws;
+  if (ws && ws.capN >= B * T && ws.capT >= T) return ws;
+  var N = B * T, D = this.D, F = this.F, V = this.V, H = this.H, l;
+  var capN = ws ? Math.max(ws.capN, N) : N;
+  var capT = ws ? Math.max(ws.capT, T) : T;
+  var capB = Math.ceil(capN / capT);
+  var sc = Math.max(1, capB * H * capT * capT);
+  var A = this.alloc;
+  ws = {
+    capN: capN, capT: capT,
+    X: A(capN * D), XF: A(capN * D), LOG: A(capN * V),
+    dX: A(capN * D), dXN: A(capN * D), dQKV: A(capN * 3 * D), dZ1: A(capN * F), dG1: A(capN * F),
+    dXF: A(capN * D), dLOG: A(capN * V), dSC: A(sc), dAttn: A(capN * D), dA2: A(capN * D),
+    xh: A((2 * this.L + 1) * capN * D),
+    ln: A((4 * this.L + 2) * capN),
+    layers: []
+  };
+  for (l = 0; l < this.L; l++){
+    ws.layers.push({
+      xn1: A(capN * D), xn2: A(capN * D), qkv: A(capN * 3 * D), a: A(capN * D),
+      z1: A(capN * F), g1: A(capN * F), sc: A(sc),
+      maskA: A(sc), maskF: A(capN * F)
+    });
+  }
+  this.ws = ws;
+  return ws;
+};
+
+// tokens/targets: Int32Array(B*T). Returns mean CE loss (targets==null -> 0).
+Model.prototype.forward = function(tokens, B, T, targets, opts){
+  var D = this.D, H = this.H, HD = this.HD, L = this.L, V = this.V, F = this.F, N = B * T;
+  var ws = this.ensure(B, T);
+  var X = ws.X, XF = ws.XF, LOG = ws.LOG, ln = ws.ln, XH = ws.xh;
+  var wte = this.wte.data, wpe = this.wpe.data, i, d, n, t, b, h, s, v, l;
+  var scale = 1 / Math.sqrt(HD);
+  var dropP = (opts && opts.train) ? (opts.dropout || 0) : 0;
+  this.dropP = dropP;
+  var rng = opts && opts.rng;
+  this.B = B; this.T = T; this.N = N;
+
+  for (n = 0; n < N; n++){
+    var tok = tokens[n], xo = n * D, eo = tok * D, po = (n % T) * D;
+    for (d = 0; d < D; d++) X[xo + d] = wte[eo + d] + wpe[po + d];
+  }
+
+  for (l = 0; l < L; l++){
+    var ly = this.layers[l], buf = ws.layers[l];
+    var XN = buf.xn1, QKV = buf.qkv, A = buf.a, Z1 = buf.z1, G1 = buf.g1, SC = buf.sc;
+    lnForward(X, ly.ln1g.data, ly.ln1b.data, XN, ln.subarray((4 * l) * N, (4 * l + 1) * N), ln.subarray((4 * l + 1) * N, (4 * l + 2) * N), N, D, XH.subarray((2 * l) * N * D, (2 * l + 1) * N * D));
+    zero(QKV, N * 3 * D);
+    mm(XN, ly.wqkv.data, QKV, N, D, 3 * D);
+    addBias(QKV, N, 3 * D, ly.bqkv.data);
+
+    var maskA = buf.maskA, maskF = buf.maskF;
+    if (dropP > 0 && rng){
+      var keep = 1 / (1 - dropP), ns = B * H * T * T;
+      for (i = 0; i < ns; i++) maskA[i] = rng.next() < dropP ? 0 : keep;
+      for (i = 0; i < N * F; i++) maskF[i] = rng.next() < dropP ? 0 : keep;
+    } else {
+      maskA = null; maskF = null;
+    }
+    for (b = 0; b < B; b++){
+      for (h = 0; h < H; h++){
+        var sBase = (b * H + h) * T * T;
+        for (t = 0; t < T; t++){
+          n = b * T + t;
+          var qOff = n * 3 * D + h * HD, sRow = sBase + t * T, mx = -Infinity, sum = 0;
+          for (s = 0; s <= t; s++){
+            var kOff = (b * T + s) * 3 * D + D + h * HD, acc = 0;
+            for (i = 0; i < HD; i++) acc += QKV[qOff + i] * QKV[kOff + i];
+            SC[sRow + s] = acc * scale;
+            if (SC[sRow + s] > mx) mx = SC[sRow + s];
+          }
+          for (s = 0; s <= t; s++){ var e = Math.exp(SC[sRow + s] - mx); SC[sRow + s] = e; sum += e; }
+          var inv = 1 / sum;
+          for (s = 0; s <= t; s++) SC[sRow + s] *= inv;
+          var ao = n * D + h * HD;
+          for (i = 0; i < HD; i++) A[ao + i] = 0;
+          for (s = 0; s <= t; s++){
+            var p = SC[sRow + s] * (maskA ? maskA[sRow + s] : 1);
+            var vOff = (b * T + s) * 3 * D + 2 * D + h * HD;
+            for (i = 0; i < HD; i++) A[ao + i] += p * QKV[vOff + i];
+          }
+        }
+      }
+    }
+    if (opts && opts.collect) this.collectAttn(l, SC, B, T);
+
+    mm(A, ly.wo.data, X, N, D, D);
+    addBias(X, N, D, ly.bo.data);
+
+    XN = buf.xn2;
+    lnForward(X, ly.ln2g.data, ly.ln2b.data, XN, ln.subarray((4 * l + 2) * N, (4 * l + 3) * N), ln.subarray((4 * l + 3) * N, (4 * l + 4) * N), N, D, XH.subarray((2 * l + 1) * N * D, (2 * l + 2) * N * D));
+    zero(Z1, N * F);
+    mm(XN, ly.w1.data, Z1, N, D, F);
+    addBias(Z1, N, F, ly.b1.data);
+    if (maskF) for (i = 0; i < N * F; i++) G1[i] = gelu(Z1[i]) * maskF[i];
+    else for (i = 0; i < N * F; i++) G1[i] = gelu(Z1[i]);
+    zero(XF, N * D);
+    mm(G1, ly.w2.data, XF, N, F, D);
+    addBias(XF, N, D, ly.b2.data);
+    for (i = 0; i < N * D; i++) X[i] += XF[i];
+  }
+
+  lnForward(X, this.lnfg.data, this.lnfb.data, XF, ln.subarray((4 * L) * N, (4 * L + 1) * N), ln.subarray((4 * L + 1) * N, (4 * L + 2) * N), N, D, XH.subarray(2 * L * N * D, (2 * L + 1) * N * D));
+  mmABt(LOG, XF, wte, N, D, V);
+
+  if (!targets) return 0;
+  var loss = 0;
+  for (n = 0; n < N; n++){
+    var off = n * V, tgt = targets[n], mx2 = -Infinity, sum2 = 0;
+    for (v = 0; v < V; v++){ if (LOG[off + v] > mx2) mx2 = LOG[off + v]; }
+    for (v = 0; v < V; v++){ var e2 = Math.exp(LOG[off + v] - mx2); LOG[off + v] = e2; sum2 += e2; }
+    var inv2 = 1 / sum2;
+    for (v = 0; v < V; v++) LOG[off + v] *= inv2;
+    loss -= Math.log(Math.max(LOG[off + tgt], 1e-12));
+  }
+  return loss / N;
+};
+
+Model.prototype.collectAttn = function(){
+  if (!this.attnSnap) this.attnSnap = [];
+};
+
+Model.prototype.zeroGrad = function(){
+  for (var i = 0; i < this.params.length; i++) zero(this.params[i].grad, this.params[i].grad.length);
+};
+
+Model.prototype.backward = function(tokens, B, T, targets){
+  var D = this.D, H = this.H, HD = this.HD, L = this.L, V = this.V, F = this.F, N = B * T;
+  var ws = this.ensure(B, T);
+  var X = ws.X, XF = ws.XF, LOG = ws.LOG, ln = ws.ln, XH = ws.xh;
+  var dX = ws.dX, dXN = ws.dXN, dQKV = ws.dQKV, dZ1 = ws.dZ1, dG1 = ws.dG1, dXF = ws.dXF, dLOG = ws.dLOG, dSC = ws.dSC;
+  var i, d, n, t, b, h, s, v, l, off;
+  var scale = 1 / Math.sqrt(HD), invN = 1 / N;
+
+  for (n = 0; n < N; n++){
+    off = n * V;
+    for (v = 0; v < V; v++) dLOG[off + v] = LOG[off + v] * invN;
+    dLOG[off + targets[n]] -= invN;
+  }
+  zero(dXF, N * D);
+  mm(dLOG, this.wte.data, dXF, N, V, D);
+  mmAtB(dLOG, XF, this.wte.grad, N, V, D);
+  lnBackward(XH.subarray(2 * L * N * D, (2 * L + 1) * N * D), dXF, this.lnfg.data, dX, this.lnfg.grad, this.lnfb.grad,
+    ln.subarray((4 * L + 1) * N, (4 * L + 2) * N), N, D);
+
+  for (l = L - 1; l >= 0; l--){
+    var ly = this.layers[l], buf = ws.layers[l];
+    var XN1 = buf.xn1, XN2 = buf.xn2, QKV = buf.qkv, A = buf.a, Z1 = buf.z1, G1 = buf.g1, SC = buf.sc;
+    var maskA = this.dropP > 0 ? buf.maskA : null, maskF = this.dropP > 0 ? buf.maskF : null;
+    // ---- FFN: dG1 = dX @ W2^T, dZ1 = dG1 * gelu'(Z1) ----
+    zero(dG1, N * F);
+    mmABt(dG1, dX, ly.w2.data, N, D, F);
+    mmAtB(G1, dX, ly.w2.grad, N, F, D);
+    addBiasGrad(ly.b2.grad, dX, N, D);
+    if (maskF) for (i = 0; i < N * F; i++) dZ1[i] = dG1[i] * maskF[i] * geluGrad(Z1[i]);
+    else for (i = 0; i < N * F; i++) dZ1[i] = dG1[i] * geluGrad(Z1[i]);
+    zero(dXN, N * D);
+    mmABt(dXN, dZ1, ly.w1.data, N, F, D);
+    mmAtB(XN2, dZ1, ly.w1.grad, N, D, F);
+    addBiasGrad(ly.b1.grad, dZ1, N, F);
+    lnBackward(XH.subarray((2 * l + 1) * N * D, (2 * l + 2) * N * D), dXN, ly.ln2g.data, ws.dA2, ly.ln2g.grad, ly.ln2b.grad,
+      ln.subarray((4 * l + 3) * N, (4 * l + 4) * N), N, D);
+    for (i = 0; i < N * D; i++) dX[i] += ws.dA2[i];
+
+    // ---- Attention ----
+    zero(ws.dAttn, N * D);
+    mmABt(ws.dAttn, dX, ly.wo.data, N, D, D);
+    mmAtB(A, dX, ly.wo.grad, N, D, D);
+    addBiasGrad(ly.bo.grad, dX, N, D);
+    zero(dQKV, N * 3 * D);
+    zero(dSC, B * H * T * T);
+    for (b = 0; b < B; b++){
+      for (h = 0; h < H; h++){
+        var sBase = (b * H + h) * T * T;
+        for (t = 0; t < T; t++){
+          n = b * T + t;
+          var sRow = sBase + t * T, doOff = n * D + h * HD, dsum = 0;
+          for (s = 0; s <= t; s++){
+            var vOff = (b * T + s) * 3 * D + 2 * D + h * HD, dp = 0;
+            for (i = 0; i < HD; i++) dp += ws.dAttn[doOff + i] * QKV[vOff + i];
+            if (maskA) dp *= maskA[sRow + s];
+            dSC[sRow + s] = dp;
+            dsum += SC[sRow + s] * dp;
+          }
+          for (s = 0; s <= t; s++){
+            var p2 = SC[sRow + s], pm = maskA ? p2 * maskA[sRow + s] : p2;
+            var ds = p2 * (dSC[sRow + s] - dsum) * scale;
+            var qOff = n * 3 * D + h * HD, kOff = (b * T + s) * 3 * D + D + h * HD;
+            var vOff2 = (b * T + s) * 3 * D + 2 * D + h * HD;
+            for (i = 0; i < HD; i++){
+              dQKV[qOff + i] += ds * QKV[kOff + i];
+              dQKV[kOff + i] += ds * QKV[qOff + i];
+              dQKV[vOff2 + i] += pm * ws.dAttn[doOff + i];
+            }
+          }
+        }
+      }
+    }
+    zero(dXN, N * D);
+    mmABt(dXN, dQKV, ly.wqkv.data, N, 3 * D, D);
+    mmAtB(XN1, dQKV, ly.wqkv.grad, N, D, 3 * D);
+    addBiasGrad(ly.bqkv.grad, dQKV, N, 3 * D);
+    lnBackward(XH.subarray((2 * l) * N * D, (2 * l + 1) * N * D), dXN, ly.ln1g.data, ws.dA2, ly.ln1g.grad, ly.ln1b.grad,
+      ln.subarray((4 * l + 1) * N, (4 * l + 2) * N), N, D);
+    for (i = 0; i < N * D; i++) dX[i] += ws.dA2[i];
+  }
+
+  var wteG = this.wte.grad, wpeG = this.wpe.grad;
+  for (n = 0; n < N; n++){
+    var eo = tokens[n] * D, xo = n * D, po = (n % T) * D;
+    for (d = 0; d < D; d++){ wteG[eo + d] += dX[xo + d]; wpeG[po + d] += dX[xo + d]; }
+  }
+};
+
+Model.prototype.clipGrads = function(maxNorm){
+  var total = 0, i, j, p;
+  for (i = 0; i < this.params.length; i++){
+    p = this.params[i].grad;
+    for (j = 0; j < p.length; j++) total += p[j] * p[j];
+  }
+  var norm = Math.sqrt(total);
+  if (norm > maxNorm){
+    var sc = maxNorm / (norm + 1e-6);
+    for (i = 0; i < this.params.length; i++){
+      p = this.params[i].grad;
+      for (j = 0; j < p.length; j++) p[j] *= sc;
+    }
+  }
+  return norm;
+};
+
+Model.prototype.adamw = function(lr, t, hp){
+  var b1 = hp.beta1, b2 = hp.beta2, eps = hp.eps, wd = hp.wd;
+  var bc1 = 1 - Math.pow(b1, t), bc2 = 1 - Math.pow(b2, t);
+  for (var i = 0; i < this.params.length; i++){
+    var p = this.params[i], d = p.data, g = p.grad, m = p.m, v = p.v, n = d.length;
+    for (var j = 0; j < n; j++){
+      var gj = g[j];
+      m[j] = b1 * m[j] + (1 - b1) * gj;
+      v[j] = b2 * v[j] + (1 - b2) * gj * gj;
+      var upd = (m[j] / bc1) / (Math.sqrt(v[j] / bc2) + eps);
+      d[j] -= lr * upd;
+      if (p.decay) d[j] -= lr * wd * d[j];
+    }
+  }
+};
+
+// logits -> softmax(logits / T) -> 采样（带数值稳定的 max 平移）
+Model.prototype.sampleFromLogits = function(logits, off, V, temperature, rng, topK){
+  var i, invT = 1 / Math.max(temperature, 1e-4), mx = -Infinity;
+  var w = this.alloc(V);
+  for (i = 0; i < V; i++){
+    var z = logits[off + i] * invT;
+    w[i] = z;
+    if (z > mx) mx = z;
+  }
+  var sum = 0;
+  for (i = 0; i < V; i++){ var e = Math.exp(w[i] - mx); w[i] = e; sum += e; }
+  if (topK && topK > 0 && topK < V){
+    var idx = [];
+    for (i = 0; i < V; i++) idx.push(i);
+    idx.sort(function(a, b){ return w[b] - w[a]; });
+    sum = 0;
+    for (i = 0; i < topK; i++) sum += w[idx[i]];
+    for (i = topK; i < V; i++) w[idx[i]] = 0;
+  }
+  var r = rng.next() * sum, acc = 0;
+  for (i = 0; i < V; i++){ acc += w[i]; if (r <= acc) return i; }
+  return V - 1;
+};
+
+/* ============================== vocab / dataset ============================== */
+function buildVocab(levels, maxVocab){
+  var counts = new Map(), i, l, d;
+  for (l = 0; l < levels.length; l++){
+    var docs = levels[l].docs;
+    for (d = 0; d < docs.length; d++){
+      var txt = docs[d];
+      for (i = 0; i < txt.length; i++){
+        var ch = txt[i];
+        counts.set(ch, (counts.get(ch) || 0) + 1);
+      }
+    }
+  }
+  var entries = Array.from(counts.entries());
+  entries.sort(function(a, b){ return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); });
+  var all = entries.map(function(e){ return e[0]; });
+  var kept = all;
+  if (maxVocab && all.length + 1 > maxVocab) kept = all.slice(0, maxVocab - 1);
+  var itos = ['<unk>'].concat(kept);
+  var stoi = new Map();
+  for (i = 0; i < itos.length; i++) stoi.set(itos[i], i);
+  return { itos: itos, stoi: stoi, totalChars: all.length, counts: counts };
+}
+
+function encodeText(text, stoi){
+  var out = new Int32Array(text.length);
+  for (var i = 0; i < text.length; i++){
+    var id = stoi.get(text[i]);
+    out[i] = id === undefined ? 0 : id;
+  }
+  return out;
+}
+
+function buildDataset(levels, stoi){
+  var res = [], l;
+  for (l = 0; l < levels.length; l++){
+    var docs = levels[l].docs, trainParts = [], valParts = [], d;
+    for (d = 0; d < docs.length; d++){
+      (d % 7 === 6 ? valParts : trainParts).push(docs[d]);
+    }
+    if (!docs.length){
+      res.push({ train: new Int32Array(0), val: new Int32Array(0), trainChars: 0, valChars: 0, docs: 0 });
+      continue;
+    }
+    if (!valParts.length){ valParts.push(trainParts.pop()); }
+    if (!trainParts.length){ trainParts.push(valParts.shift()); }
+    var tr = trainParts.join('\n') + '\n', va = valParts.join('\n') + '\n';
+    res.push({ train: encodeText(tr, stoi), val: encodeText(va, stoi), trainChars: tr.length, valChars: va.length, docs: docs.length });
+  }
+  return res;
+}
+
+/* ============================== Trainer ============================== */
+var CURRICULUM_PRESETS = [
+  [1.0, 0.0, 0.0, 0.0],
+  [0.3, 0.7, 0.0, 0.0],
+  [0.2, 0.3, 0.5, 0.0],
+  [0.1, 0.2, 0.3, 0.4]
+];
+
+function Trainer(opts){
+  this.corpus = opts.corpus;
+  this.maxVocab = opts.maxVocab || 1000;
+  this.modelCfg = opts.modelConfig || { nLayer: 2, nHead: 4, dModel: 64, ctx: 64 };
+  this.seed = opts.seed === undefined ? 20240601 : opts.seed;
+  this.hp = {
+    lr: 0.0015, batchSize: 8, temperature: 0.85, topK: 0,
+    genLength: 48, valInterval: 25, sampleInterval: 20, autosaveInterval: 100,
+    totalSteps: 1000, stageLength: 250, gradClip: 1.0, weightDecay: 0.05, minLrRatio: 0.1, warmupSteps: 40,
+    dropout: 0.15
+  };
+  this.curriculum = { mode: 'auto', stage: 0, weights: CURRICULUM_PRESETS[0].slice() };
+  this.history = { train: [], val: [], lr: [], perLevel: [], steps: [], valSteps: [] };
+  this.snapshots = [];
+  this.reset(true);
+}
+
+Trainer.prototype.reset = function(freshRng){
+  if (freshRng){ this.rng = makeRng(this.seed); this.rngGen = makeRng((this.seed * 2654435761) >>> 0); }
+  this.vocab = buildVocab(this.corpus.levels, this.maxVocab);
+  this.dataset = buildDataset(this.corpus.levels, this.vocab.stoi);
+  this.model = new Model({
+    nLayer: this.modelCfg.nLayer, nHead: this.modelCfg.nHead, dModel: this.modelCfg.dModel,
+    ctx: this.modelCfg.ctx, vocab: this.vocab.itos.length
+  }, this.rng);
+  this.step = 0;
+  this.optStep = 0;
+  this.levelTokens = [0, 0, 0, 0];
+  this.history = { train: [], val: [], lr: [], perLevel: [], steps: [], valSteps: [] };
+  this.snapshots = [];
+  this.curriculum = { mode: this.curriculum.mode, stage: 0, weights: CURRICULUM_PRESETS[0].slice() };
+  this.lastVal = null;
+  this.lastLoss = null;
+};
+
+Trainer.prototype.lrAt = function(step){
+  var h = this.hp, warm = Math.max(1, Math.min(h.warmupSteps, h.totalSteps * 0.1));
+  if (step <= warm) return h.lr * (step / warm);
+  var minLr = h.lr * h.minLrRatio;
+  var prog = Math.min(1, (step - warm) / Math.max(1, h.totalSteps - warm));
+  return minLr + 0.5 * (h.lr - minLr) * (1 + Math.cos(Math.PI * prog));
+};
+
+Trainer.prototype.autoAdvance = function(){
+  if (this.curriculum.mode !== 'auto') return false;
+  var st = Math.min(3, Math.floor(this.step / Math.max(1, this.hp.stageLength)));
+  if (st !== this.curriculum.stage){
+    this.curriculum.stage = st;
+    this.curriculum.weights = CURRICULUM_PRESETS[st].slice();
+    return true;
+  }
+  return false;
+};
+
+Trainer.prototype.stageProgress = function(){
+  var len = Math.max(1, this.hp.stageLength);
+  return Math.max(0, Math.min(1, (this.step - this.curriculum.stage * len) / len));
+};
+
+Trainer.prototype.pickLevel = function(){
+  var w = this.curriculum.weights, acc = 0, i;
+  for (i = 0; i < 4; i++) acc += Math.max(0, w[i]);
+  if (acc <= 0) return 0;
+  var r = this.rng.next() * acc;
+  var run = 0;
+  for (i = 0; i < 4; i++){
+    run += Math.max(0, w[i]);
+    if (r < run) return i;
+  }
+  return 3;
+};
+
+Trainer.prototype.nextBatch = function(){
+  var B = this.hp.batchSize, T = this.model.ctx;
+  var inputs = new Int32Array(B * T), targets = new Int32Array(B * T);
+  for (var b = 0; b < B; b++){
+    var lv = this.pickLevel(), ids = this.dataset[lv].train;
+    var maxOff = Math.max(0, ids.length - T - 1);
+    var off = maxOff > 0 ? this.rng.int(maxOff) : 0;
+    for (var t = 0; t < T; t++){
+      var idx = Math.min(off + t, ids.length - 1);
+      inputs[b * T + t] = ids[idx];
+      targets[b * T + t] = ids[Math.min(idx + 1, ids.length - 1)];
+    }
+    this.levelTokens[lv] += T;
+  }
+  return { inputs: inputs, targets: targets };
+};
+
+Trainer.prototype.trainStep = function(){
+  var B = this.hp.batchSize, T = this.model.ctx;
+  var batch = this.nextBatch();
+  var loss = this.model.forward(batch.inputs, B, T, batch.targets, { train: true, dropout: this.hp.dropout, rng: this.rng });
+  this.model.zeroGrad();
+  this.model.backward(batch.inputs, B, T, batch.targets);
+  var gnorm = this.model.clipGrads(this.hp.gradClip);
+  this.step++;
+  this.optStep++;
+  var lr = this.lrAt(this.step);
+  this.model.adamw(lr, this.optStep, { beta1: 0.9, beta2: 0.999, eps: 1e-8, wd: this.hp.weightDecay });
+  var switched = this.autoAdvance();
+  this.lastLoss = loss;
+  this.history.train.push(loss);
+  this.history.lr.push(lr);
+  this.history.steps.push(this.step);
+  if (this.history.train.length > 50000){
+    this.history.train = this.history.train.slice(-20000);
+    this.history.lr = this.history.lr.slice(-20000);
+    this.history.steps = this.history.steps.slice(-20000);
+  }
+  return { loss: loss, lr: lr, gradNorm: gnorm, switched: switched };
+};
+
+Trainer.prototype.validate = function(){
+  var T = this.model.ctx, per = [], lv;
+  for (lv = 0; lv < 4; lv++){
+    var ids = this.dataset[lv].val;
+    if (ids.length < T + 1){ per.push(NaN); continue; }
+    var windows = Math.max(1, Math.min(4, Math.floor(ids.length / (T + 1))));
+    var total = 0, count = 0;
+    for (var w = 0; w < windows; w++){
+      var span = Math.max(1, ids.length - T - 1);
+      var off = Math.floor((w + 0.5) * span / windows);
+      var inp = new Int32Array(T), tgt = new Int32Array(T);
+      for (var t = 0; t < T; t++){
+        var idx = Math.min(off + t, ids.length - 1);
+        inp[t] = ids[idx];
+        tgt[t] = ids[Math.min(idx + 1, ids.length - 1)];
+      }
+      total += this.model.forward(inp, 1, T, tgt);
+      count++;
+    }
+    per.push(total / count);
+  }
+  var mean = (per[0] + per[1] + per[2] + per[3]) / 4;
+  this.lastVal = { step: this.step, perLevel: per, mean: mean };
+  this.history.val.push(mean);
+  this.history.valSteps.push(this.step);
+  this.history.perLevel.push(per.slice());
+  return this.lastVal;
+};
+
+Trainer.prototype.generate = function(prompt, length, temperature){
+  var stoi = this.vocab.stoi, itos = this.vocab.itos, ids = [], i;
+  for (i = 0; i < prompt.length; i++){
+    var id = stoi.get(prompt[i]);
+    ids.push(id === undefined ? 0 : id);
+  }
+  if (!ids.length) ids.push(0);
+  var T = this.model.ctx, all = ids.slice(), out = [];
+  for (i = 0; i < length; i++){
+    var seq = all.slice(Math.max(0, all.length - T));
+    var tin = new Int32Array(seq.length);
+    for (var j = 0; j < seq.length; j++) tin[j] = seq[j];
+    this.model.forward(tin, 1, seq.length, null);
+    var V = this.model.V, off = (seq.length - 1) * V;
+    var next = this.model.sampleFromLogits(this.model.ws.LOG, off, V, temperature, this.rngGen, this.hp.topK);
+    all.push(next);
+    out.push(next);
+  }
+  var text = out.map(function(x){ return itos[x]; }).join('');
+  return { text: text, ids: out, promptIds: ids };
+};
+
+Trainer.prototype.attention = function(prompt){
+  var stoi = this.vocab.stoi, ids = [], i;
+  for (i = 0; i < prompt.length; i++){
+    var id = stoi.get(prompt[i]);
+    ids.push(id === undefined ? 0 : id);
+  }
+  if (!ids.length) ids.push(0);
+  var T = this.model.ctx;
+  ids = ids.slice(Math.max(0, ids.length - T));
+  var tin = new Int32Array(ids.length);
+  for (i = 0; i < ids.length; i++) tin[i] = ids[i];
+  var snaps = [];
+  var origCollect = this.model.collectAttn;
+  var self = this;
+  this.model.collectAttn = function(l, SC, B, T2){
+    var H = self.model.H, heads = [];
+    for (var h = 0; h < H; h++){
+      var copy = new Float32Array(T2 * T2), src = h * T2 * T2;
+      // 因果掩码之外的位置在缓冲区里是旧值，这里显式置 0，保证导出的矩阵干净
+      for (var t = 0; t < T2; t++) for (var s = 0; s <= t; s++) copy[t * T2 + s] = SC[src + t * T2 + s];
+      heads.push(copy);
+    }
+    snaps.push({ layer: l, heads: heads, T: T2, H: H, B: B });
+  };
+  this.model.forward(tin, 1, ids.length, null, { collect: true });
+  this.model.collectAttn = origCollect;
+  var chars = [];
+  for (i = 0; i < ids.length; i++) chars.push(this.vocab.itos[ids[i]]);
+  return { chars: chars, layers: snaps };
+};
+
+Trainer.prototype.embeddingPoints = function(limit){
+  var D = this.model.D, wte = this.model.wte.data, counts = this.vocab.counts;
+  var cand = [];
+  for (var id = 1; id < this.vocab.itos.length; id++){
+    var ch = this.vocab.itos[id];
+    cand.push({ id: id, ch: ch, c: counts.get(ch) || 0 });
+  }
+  cand.sort(function(a, b){ return b.c - a.c; });
+  cand = cand.slice(0, limit || 150);
+  var n = cand.length;
+  if (!n) return { points: [] };
+  var mean = new Float32Array(D), i, d, a, b;
+  for (i = 0; i < n; i++) for (d = 0; d < D; d++) mean[d] += wte[cand[i].id * D + d] / n;
+  var E = new Float32Array(n * D);
+  for (i = 0; i < n; i++) for (d = 0; d < D; d++) E[i * D + d] = wte[cand[i].id * D + d] - mean[d];
+  var C = new Float32Array(D * D);
+  for (i = 0; i < n; i++){
+    var off = i * D;
+    for (a = 0; a < D; a++){
+      var va = E[off + a];
+      if (!va) continue;
+      for (b = 0; b < D; b++) C[a * D + b] += va * E[off + b];
+    }
+  }
+  for (a = 0; a < D * D; a++) C[a] /= n;
+  var comps = [], iter;
+  for (var k = 0; k < 2; k++){
+    var vec = new Float32Array(D);
+    for (a = 0; a < D; a++) vec[a] = 1 + a * 0.001;
+    var norm = 0;
+    for (iter = 0; iter < 80; iter++){
+      var nv = new Float32Array(D);
+      for (a = 0; a < D; a++){
+        var acc = 0;
+        for (b = 0; b < D; b++) acc += C[a * D + b] * vec[b];
+        nv[a] = acc;
+      }
+      norm = 0;
+      for (a = 0; a < D; a++) norm += nv[a] * nv[a];
+      norm = Math.sqrt(norm) || 1;
+      for (a = 0; a < D; a++) vec[a] = nv[a] / norm;
+    }
+    comps.push(vec);
+    for (a = 0; a < D; a++) for (b = 0; b < D; b++) C[a * D + b] -= norm * vec[a] * vec[b];
+  }
+  var pts = [];
+  for (i = 0; i < n; i++){
+    var o = i * D, x = 0, y = 0;
+    for (d = 0; d < D; d++){ x += E[o + d] * comps[0][d]; y += E[o + d] * comps[1][d]; }
+    pts.push({ ch: cand[i].ch, x: x, y: y });
+  }
+  return { points: pts };
+};
+
+/* ============================== checkpoint ============================== */
+function fnvHash(str){
+  var h = 2166136261;
+  for (var i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function b64FromF32(arr){
+  var u8 = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength), s = '', CH = 0x8000;
+  for (var i = 0; i < u8.length; i += CH) s += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+  return btoa(s);
+}
+function f32FromB64(str){
+  var bin = atob(str), u8 = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new Float32Array(u8.buffer, 0, u8.length / 4);
+}
+
+Trainer.prototype.checkpoint = function(extra){
+  var m = this.model;
+  var ck = {
+    format: 'zlm-checkpoint', version: 1,
+    corpusVersion: this.corpus.version,
+    modelConfig: { nLayer: m.cfg.nLayer, nHead: m.cfg.nHead, dModel: m.cfg.dModel, ctx: m.cfg.ctx },
+    vocabSize: this.vocab.itos.length,
+    seed: this.seed,
+    hp: JSON.parse(JSON.stringify(this.hp)),
+    curriculum: JSON.parse(JSON.stringify(this.curriculum)),
+    step: this.step, optStep: this.optStep,
+    rng: this.rng.state(), rngGen: this.rngGen.state(),
+    history: this.history,
+    lastVal: this.lastVal,
+    levelTokens: this.levelTokens,
+    snapshots: this.snapshots,
+    weights: m.params.map(function(p){
+      return { name: p.name, n: p.data.length, w: b64FromF32(p.data), m: b64FromF32(p.m), v: b64FromF32(p.v) };
+    })
+  };
+  if (extra) for (var k in extra) ck[k] = extra[k];
+  ck.checksum = fnvHash(JSON.stringify(ck));
+  return ck;
+};
+
+Trainer.prototype.restore = function(ck){
+  if (!ck || typeof ck !== 'object' || ck.format !== 'zlm-checkpoint') throw new Error('不是有效的训练进度文件（缺少格式标识）');
+  if (ck.version !== 1) throw new Error('训练进度版本不兼容：' + ck.version + '，当前支持版本 1');
+  if (ck.corpusVersion !== this.corpus.version) throw new Error('语料版本不匹配：文件为 ' + ck.corpusVersion + '，页面内置为 ' + this.corpus.version);
+  if (typeof ck.checksum !== 'number') throw new Error('训练进度文件缺少校验和，可能来自不兼容的版本');
+  var body = {};
+  for (var key in ck) if (key !== 'checksum') body[key] = ck[key];
+  if (fnvHash(JSON.stringify(body)) !== ck.checksum) throw new Error('训练进度文件已损坏（校验和不匹配）');
+  var built = buildVocab(this.corpus.levels, this.maxVocab);
+  if (ck.vocabSize !== built.itos.length) throw new Error('词表大小不匹配：文件为 ' + ck.vocabSize + '，当前为 ' + built.itos.length);
+  var cfg = ck.modelConfig;
+  if (!cfg || !(cfg.nLayer > 0) || !(cfg.nHead > 0) || !(cfg.dModel > 0) || !(cfg.ctx > 0)) throw new Error('训练进度中的模型配置无效');
+  if (cfg.dModel % cfg.nHead !== 0) throw new Error('训练进度中的模型配置无效（dModel 不能被 nHead 整除）');
+  var newModel = new Model({
+    nLayer: cfg.nLayer, nHead: cfg.nHead, dModel: cfg.dModel, ctx: cfg.ctx, vocab: built.itos.length
+  }, makeRng(1));
+  var byName = {};
+  for (var i = 0; i < newModel.params.length; i++) byName[newModel.params[i].name] = newModel.params[i];
+  if (!ck.weights || ck.weights.length !== newModel.params.length) throw new Error('训练进度中的权重数量不匹配');
+  function decodeParam(b64, expect, label){
+    var arr;
+    try { arr = f32FromB64(b64); }
+    catch (e){ throw new Error('参数 ' + label + ' 的权重数据无法解码（文件已损坏）'); }
+    if (arr.length !== expect) throw new Error('参数 ' + label + ' 的权重数据长度不匹配（文件已损坏）');
+    for (var q = 0; q < arr.length; q++){
+      if (!isFinite(arr[q])) throw new Error('参数 ' + label + ' 的权重数据包含非法数值（文件已损坏）');
+    }
+    return arr;
+  }
+  for (i = 0; i < ck.weights.length; i++){
+    var rec = ck.weights[i], p = byName[rec.name];
+    if (!p) throw new Error('训练进度中出现未知参数：' + rec.name);
+    if (rec.n !== p.data.length) throw new Error('参数 ' + rec.name + ' 尺寸不匹配');
+    p.data.set(decodeParam(rec.w, rec.n, rec.name));
+    p.m.set(decodeParam(rec.m, rec.n, rec.name + '.m'));
+    p.v.set(decodeParam(rec.v, rec.n, rec.name + '.v'));
+  }
+  this.modelCfg = { nLayer: cfg.nLayer, nHead: cfg.nHead, dModel: cfg.dModel, ctx: cfg.ctx };
+  this.model = newModel;
+  this.vocab = built;
+  this.dataset = buildDataset(this.corpus.levels, built.stoi);
+  this.hp = Object.assign({}, this.hp, ck.hp || {});
+  this.curriculum = ck.curriculum || this.curriculum;
+  this.step = ck.step | 0;
+  this.optStep = ck.optStep | 0;
+  this.rng.setState(ck.rng >>> 0);
+  this.rngGen.setState(ck.rngGen >>> 0);
+  this.history = ck.history || { train: [], val: [], lr: [], perLevel: [], steps: [], valSteps: [] };
+  this.levelTokens = ck.levelTokens || [0, 0, 0, 0];
+  this.snapshots = ck.snapshots || [];
+  this.lastVal = ck.lastVal || null;
+  this.lastLoss = this.history.train.length ? this.history.train[this.history.train.length - 1] : null;
+  return true;
+};
+
+Trainer.prototype.setHp = function(patch){
+  var h = this.hp;
+  if ('lr' in patch) h.lr = Math.max(1e-5, Math.min(0.1, +patch.lr));
+  if ('batchSize' in patch) h.batchSize = Math.max(1, Math.min(32, Math.round(patch.batchSize)));
+  if ('temperature' in patch) h.temperature = Math.max(0.05, Math.min(2, +patch.temperature));
+  if ('genLength' in patch) h.genLength = Math.max(1, Math.min(200, Math.round(patch.genLength)));
+  if ('valInterval' in patch) h.valInterval = Math.max(1, Math.round(patch.valInterval));
+  if ('sampleInterval' in patch) h.sampleInterval = Math.max(1, Math.round(patch.sampleInterval));
+  if ('autosaveInterval' in patch) h.autosaveInterval = Math.max(1, Math.round(patch.autosaveInterval));
+  if ('totalSteps' in patch) h.totalSteps = Math.max(50, Math.round(patch.totalSteps));
+  if ('stageLength' in patch) h.stageLength = Math.max(10, Math.round(patch.stageLength));
+  if ('gradClip' in patch) h.gradClip = Math.max(0.1, +patch.gradClip);
+  if ('weightDecay' in patch) h.weightDecay = Math.max(0, +patch.weightDecay);
+  if ('topK' in patch) h.topK = Math.max(0, Math.round(patch.topK));
+  if ('dropout' in patch) h.dropout = Math.max(0, Math.min(0.5, +patch.dropout));
+};
+
+Trainer.prototype.setCurriculum = function(patch){
+  var c = this.curriculum;
+  if (patch.mode) c.mode = patch.mode === 'manual' ? 'manual' : 'auto';
+  if (patch.stage !== undefined){
+    c.stage = Math.max(0, Math.min(3, Math.round(patch.stage)));
+    // 手动指定阶段意味着“就用这个阶段的语料比例”，因此切到 manual 并应用该阶段预设
+    if (patch.weights === undefined){
+      if (!patch.mode) c.mode = 'manual';
+      c.weights = CURRICULUM_PRESETS[c.stage].slice();
+    }
+  }
+  if (patch.weights){
+    var w = patch.weights.map(function(x){ return Math.max(0, +x); });
+    if (w.length === 4){
+      var s = w[0] + w[1] + w[2] + w[3];
+      if (s > 0) c.weights = w.map(function(x){ return x / s; });
+    }
+  }
+  return c;
+};
+
+Trainer.prototype.status = function(){
+  return {
+    step: this.step, loss: this.lastLoss, lr: this.lrAt(Math.max(1, this.step)),
+    stage: this.curriculum.stage, mode: this.curriculum.mode, weights: this.curriculum.weights.slice(),
+    stageProgress: this.stageProgress(), levelTokens: this.levelTokens.slice(),
+    paramCount: this.model.paramCount, vocabSize: this.vocab.itos.length,
+    val: this.lastVal, totalSteps: this.hp.totalSteps, stageLength: this.hp.stageLength,
+    corpusVersion: this.corpus.version,
+    hp: JSON.parse(JSON.stringify(this.hp)),
+    modelConfig: { nLayer: this.model.cfg.nLayer, nHead: this.model.cfg.nHead, dModel: this.model.cfg.dModel, ctx: this.model.cfg.ctx }
+  };
+};
+
+/* ============================== 内置中文分级语料 ============================== */
+var CORPUS = {
+  version: 'zlm-corpus-1',
+  levels: [
+    { id: 'L1', name: '启蒙识字', docs: [
+    "小猫喜欢吃鱼。它也喜欢喝牛奶。",
+    "小狗正在睡觉。它睡在门后面。",
+    "今天天气很好。太阳出来了，天空很蓝。",
+    "小兔子来到森林里。它看见了很多花。",
+    "妈妈在做饭。饭很香，我很高兴。",
+    "爸爸开车去上班。他说晚上会回来。",
+    "我和弟弟去公园玩。公园里有很多树。",
+    "小鸟在树上唱歌。它的声音很好听。",
+    "老师走进教室。同学们都坐好了。",
+    "我有一支笔。我用它写字。",
+    "桌子上有一个苹果。我把它吃掉了。",
+    "妹妹在画画。她画了一只小猫。",
+    "天黑了。月亮出来了，星星也出来了。",
+    "下雨了。我打着伞去上学。",
+    "河里有很多鱼。它们在水中游来游去。",
+    "山上有一棵大树。树上住着小鸟。",
+    "我家有一只白猫。它很爱干净。",
+    "早上我吃了面包和鸡蛋。然后我去上学。",
+    "同学们在操场上跑步。他们跑得很快。",
+    "奶奶在院子里种花。花开得很好看。",
+    "我喜欢读书。书里有很多故事。",
+    "弟弟想吃糖。妈妈说要先吃饭。",
+    "冬天来了。天上下了雪，地上很白。",
+    "我在门口等爸爸。他很快就回来了。",
+    "小鸟飞到窗台上。它看着我，我叫了一声。",
+    "小鱼在水里游。它看见了一只小虾。",
+    "太阳落山了。天边变成了红色。",
+    "我们一起去爬山。山上有石头和小草。",
+    "老师问了一个问题。我想了想，举起了手。",
+    "小猫在沙发上睡觉。它睡得很香。",
+    "我帮妈妈拿东西。妈妈说我长大了。",
+    "小狗跑过来。它摇着尾巴，很高兴。",
+    "桌子上放着两本书。一本是语文，一本是数学。",
+    "早晨的空气很新鲜。我在院子里走了走。",
+    "小兔子吃萝卜。它吃得很开心。",
+    "我喜欢画画。我画了太阳和白云。",
+    "风把树叶吹走了。树叶落在地上。",
+    "妈妈给我买了一个新书包。我很喜欢它。",
+    "我和同学一起回家。路上我们说了很多话。",
+    "天上有白云。白云像小船一样飘着。",
+    "小猫爬到树上。它下不来了，我有点着急。",
+    "爷爷在看报纸。他戴着眼镜。",
+    "我洗完手，坐下来吃饭。",
+    "窗外有鸟叫。我打开窗户看了看。",
+    "小狗喜欢跑。它跑得比我快。",
+    "今天是我的生日。妈妈做了一个蛋糕。",
+    "小河旁边有草地。草地上有几只羊。",
+    "我读了一本故事书。故事里有一只小狐狸。",
+    "下雨以后，路上有水。我小心地走。",
+    "姐姐在弹琴。声音很好听。",
+    "我把玩具收好。房间变得很干净。",
+    "我们班有三十个同学。大家都很友好。",
+    "早上去学校的路上，我看见了一只小狗。",
+    "小猫不喜欢水。它一看见水就跑。",
+    "晚上我写完作业。然后我看了一会儿电视。",
+    "小鸭子在水里游。它一会儿游到东，一会儿游到西。",
+    "我在教室里读书。窗外有小鸟在叫。",
+    "妈妈买了一篮子菜。有白菜，有萝卜，还有土豆。",
+    "小狗看见了一只猫。它追了上去，猫跑得很快。",
+    "天上有太阳。太阳照在地上，地上很暖和。",
+    "我早上六点起床。我先洗脸，然后吃饭。",
+    "小花猫有一双大眼睛。它的毛很白，很软。",
+    "爸爸带我去河边钓鱼。我们坐了很久。",
+    "同学们在教室里写字。教室里很安静。",
+    "我把苹果分成两半。一半给弟弟，一半留给我。",
+    "小马在草地上吃草。它吃得很慢。",
+    "秋天到了。树叶黄了，风一吹就落下来。",
+    "妹妹今天很高兴。因为她学会了自己穿衣服。",
+    "我在路上看见一位老爷爷。他拿着一袋米，走得很慢。",
+    "下雨了，我没有带伞。同学把伞借给了我。",
+    "小鸟在树上做了一个窝。窝里有三只小鸟。",
+    "奶奶家有一棵苹果树。秋天的时候，树上结满了苹果。",
+    "我喜欢小狗。小狗也喜欢我。",
+    "妈妈说，吃饭以前要先洗手。我记住了。",
+    "太阳出来了。小草上的水珠慢慢不见了。",
+    "我和爸爸去山上。山上有很多石头，还有一条小路。",
+    "小猫看见了一只蝴蝶。它想抓住蝴蝶，可是蝴蝶飞走了。",
+    "我在家里找到了一本旧书。书上有一些画。",
+    "早上，我和同学一起跑步。跑完以后，我们都很累。",
+    "小狗生病了。它不想吃东西，只是趴着。",
+    "妈妈在洗衣服。我帮她拿衣架。",
+    "天黑以后，路上的灯亮了。",
+    "小兔子在草地上跳。它跳得很高。",
+    "我画了一张画。画上有山，有水，还有一只小船。",
+    "老师表扬了我。因为我按时完成了作业。",
+    "我家门前有一条小路。路边长满了草。",
+    "弟弟摔倒了。他没有哭，自己站了起来。",
+    "小鸟飞走了。它飞得很高，一会儿就看不见了。",
+    "早上下了雨。到了中午，天又晴了。",
+    "我把桌子擦干净。然后我把书放好。",
+    "小猫喜欢晒太阳。它躺在窗台上，一动也不动。",
+    "我们家的院子里有一口井。井水很凉。",
+    "我去买盐。回来的路上，我走得很慢。",
+    "小明有一辆自行车。他每天都骑它去上学。",
+    "冬天的早上很冷。我穿上了厚厚的衣服。",
+    "小虾在水底走。它看见了一条大鱼，赶快躲起来。",
+    "我数了数天上的星星。数到二十就数不清了。",
+    "妈妈问我今天学了什么。我把课文读给她听。",
+    "爷爷每天早上都去散步。他说走路对身体好。",
+    "我在公园里捡到一片树叶。它的形状像一只小手。",
+    "小狗跟着我走。我停下来，它也停下来。",
+    "我们班的窗户上有一盆花。花是红色的。",
+    "今天早上，我和妈妈一起去买菜。菜市场里人很多，声音也很大。妈妈买了鱼、青菜和豆腐。回家的路上，我帮妈妈提了一个袋子。",
+    "我家有一只小狗，它的名字叫小黄。小黄很喜欢跑，也很喜欢吃骨头。每天放学回家，它都会在门口等我。我一开门，它就摇着尾巴跑过来。",
+    "星期天，爸爸带我去公园。公园里有一个很大的湖，湖上有一只小船。我们在湖边坐了很久，看见了很多小鱼。",
+    "我喜欢下雨天。下雨的时候，我可以坐在窗边听雨声。雨停了以后，空气很新鲜，路上也很干净。",
+    "小猫今天很不高兴。它的球不见了，它到处找，也没有找到。后来我在沙发下面找到了那个球，它一下子就高兴起来了。",
+    "我们班的教室里有很多花。老师让我们每人照顾一盆。我每天给花浇水，还把它放在有太阳的地方。",
+    "早上，天还没有亮，爷爷就起床了。他先去院子里走一走，然后回来做早饭。他说早上的空气最好。",
+    "小兔子想吃萝卜，可是萝卜在地里。它用力地拔，拔了很久，终于把萝卜拔了出来。它高兴得跳了起来。",
+    "今天老师教我们写字。我写得不太好，老师说我不要着急，慢慢写就会写好。我听了以后，又写了一遍。",
+    "夏天的晚上，我们一家人坐在院子里。天上有月亮，还有很多星星。奶奶给我讲了一个故事。",
+    "我和弟弟在家里玩球。弟弟不小心把杯子碰倒了。他有点害怕。我说没关系，我们一起把地上擦干净。",
+    "小狗第一次看见雪。它先用鼻子闻了闻，然后用脚踩了踩。雪很凉，它跳了一下，又跑了起来。",
+    "早上我起晚了。我没有吃饭就跑去学校。到了学校，我发现我的书也没有带。以后我要早点起床。",
+    "我在路边看见一只小鸟。它的翅膀好像受了伤，飞不起来。我把它带回家，给它一点水和米。",
+    "小马和小羊是好朋友。它们常常一起在草地上吃草。有一天，小马生病了，小羊就守在它身边。",
+    "奶奶家的院子里有一棵大树。夏天的时候，树下面很凉快。我常常在树下看书。",
+    "我会做蛋炒饭了。妈妈先教我打鸡蛋，然后教我怎么炒。第一次做得不太好，但是爸爸妈妈都说好吃。",
+    "今天下午下了很大的雨。我没有带伞，只好在教室里等。后来雨小了，我才回家。",
+    "我喜欢小狗，也喜欢小猫。小狗很热情，小猫很安静。它们都是我的好朋友。",
+    "天黑了，小鸟回到窝里。小虫子开始叫起来。我关上窗户，准备睡觉。",
+    "小鸭子找不到妈妈了。它一边走一边叫。后来它听见了妈妈的声音，就赶快跑了过去。",
+    "我在学校学会了一首歌。回家的路上，我一直轻轻地唱。妹妹听见了，也跟着我唱。",
+    "早上的太阳从东边出来。到了晚上，它又从西边落下去。爸爸说，这是因为地球在转。",
+    "我们家门口有一家小商店。商店里卖水、面包和糖。我常常去那里买东西。",
+    "小猫爬到桌子上，看见了一个鱼缸。它伸出爪子，想抓里面的鱼。鱼一动，它吓了一跳。",
+    "冬天来了，天很冷。小河上结了一层冰。小鸟不见了，只有几只麻雀还在树上。",
+    "我帮妈妈扫地。我扫得很认真，连角落里也扫干净了。妈妈说我扫得比她还好。",
+    "今天我和同学一起做值日。我擦桌子，他扫地。做完以后，教室很干净。",
+    "小狗跑得太快了，一下子撞到了树上。它坐下来，摇了摇脑袋，然后又跑开了。",
+    "我喜欢早上出门的时候看一看天。如果天很蓝，我就知道今天会是一个好天气。",
+    "小狐狸来到森林里。它看见了很多树，也看见了一条小河。它喝了一点水，又往前走了。",
+    "小狐狸来到森林里。它走了一整天，肚子有点饿了。后来它找到几颗果子，吃得很饱。",
+    "小狐狸来到森林里。它遇见了一只小兔子。小兔子问它从哪里来，它说自己也不知道。",
+    "早上，我在院子里看见一只小猫。它趴在墙头上，一动不动地看着我。",
+    "我们家的狗很怕打雷。一听见雷声，它就躲到桌子下面去。",
+    "妈妈把洗好的衣服晒在院子里。风吹过来，衣服轻轻动着。",
+    "我在书包里找到了一块橡皮。那是上星期丢的，我以为再也找不到了。",
+    "路边的树上有一个鸟窝。我站在树下看了很久，没有看见小鸟。",
+    "弟弟今天学会了写自己的名字。他写了很多遍，纸上到处都是。",
+    "晚上，爸爸给我讲了一个故事。故事里有一只很聪明的乌鸦。",
+    "我在厨房里帮妈妈择菜。妈妈说我择得很干净。",
+    "下雨天，路上有很多水坑。弟弟喜欢踩水坑，鞋子都湿了。",
+    "我们家阳台上有一盆花。我每天给它浇水，它开了两朵小红花。",
+    "上课的时候，外面忽然下起了大雨。同学们都往窗外看。",
+    "我在公园里看见一位爷爷在放风筝。风筝飞得很高，像一只小鸟。",
+    "小猫在门口等我。我一回家，它就跟着我走。",
+    "妈妈在电话里说，她今天要晚一点回来。我自己先吃了饭。",
+    "我把自己的房间收拾了一遍。书放回书架，衣服叠好放进柜子。",
+    "早上去学校的路上，风很大，树叶一直往下落。",
+    "小河的水很清。我蹲下来，看见水里有几条小鱼。",
+    "奶奶的院子里种了很多菜。有白菜，有豆角，还有几棵辣椒。",
+    "我在学校里认识了一个新同学。他刚从别的城市搬来。",
+    "小狗把球叼到我面前，让我再扔一次。我扔了很远，它又跑过去。",
+    "秋天的下午，太阳不那么热了。我坐在院子里看书。",
+    "妹妹第一次自己穿鞋。她把左右穿反了，自己还不知道。",
+    "我把作业写完了，才去玩。妈妈说我这样做很好。",
+    "早上的菜市场很热闹。有人买菜，有人卖菜，大家都在说话。",
+    "我在树下捡到一根羽毛。它是白色的，很轻。",
+    "家里停电了。我们点上蜡烛，坐在一起说话。",
+    "冬天，窗户上结了冰花。我用手指在上面画了一个圈。",
+    "小兔子在雪地里跳。它跳过的路上，留下了一串小脚印。",
+    "我在教室里擦黑板。擦完以后，黑板上很干净。",
+    "老师让我们画自己的家。我画了房子，还画了爸爸和妈妈。",
+    "小猫看见镜子里有一只猫。它伸出爪子碰了碰镜子。",
+    "我和爸爸一起去修自行车。他修车，我在旁边看。",
+    "今天中午我吃了面条。面条里有鸡蛋和青菜，很好吃。",
+    "院子里的枣树结果了。爷爷摘了一些，让我带给同学。",
+    "我学会了系鞋带。虽然系得很慢，但是不会散开了。",
+    "早上醒来，我听见窗外有鸟叫。天气一定很好。",
+    "小鸭子跟着妈妈下水。它第一次游泳，有点害怕。",
+    "我把水倒进花盆里。土是干的，水很快就渗下去了。",
+    ] },
+    { id: 'L2', name: '小学语文', docs: [
+    "小马要过河，可是它不知道河水有多深。它问老牛，老牛说河水很浅，只到小腿。它又问小松鼠，小松鼠说河水很深，昨天还淹死了一个伙伴。小马不知道听谁的好，就回家问妈妈。妈妈说，光听别人说不行，你自己去试一试就知道了。小马走回河边，小心地下了水。原来河水既不像老牛说的那么浅，也不像小松鼠说的那么深。",
+    "一只乌鸦口渴了，到处找水喝。它看见一个瓶子，瓶子里有水，可是水不多，瓶口又小，它的嘴够不着。乌鸦想了想，看见旁边有很多小石子。它把石子一颗一颗放进瓶子里。瓶子里的水慢慢升高了，乌鸦就喝到了水。",
+    "兔子跑得很快，它看不起乌龟，说乌龟走得太慢。乌龟说，那我们就比一比。比赛开始了，兔子跑了一会儿，回头一看，乌龟还在后面很远。兔子想，我先睡一觉，反正它追不上我。兔子就在树下睡着了。乌龟一步一步地往前走，一直没有停。等兔子醒来的时候，乌龟已经快到终点了。",
+    "狐狸走过葡萄架，看见架上挂着一串串葡萄。它跳起来想摘，可是够不着。它又退后几步，用力往上跳，还是够不着。狐狸试了很多次，最后说，这些葡萄一定是酸的，我才不吃呢。说完，它就走了。",
+    "从前有一个放羊的孩子，他每天在山坡上放羊。有一天，他觉得没有意思，就大声喊，狼来了，狼来了。山下的人听见了，都跑上来帮他。可是他们到了山坡上，一只狼也没有看见。孩子笑了，说他是骗人的。过了几天，他又这样喊了一次，人们又跑上来，还是什么也没有。后来狼真的来了，孩子大声喊救命，可是这一次，没有人再上来了。",
+    "一座小桥上，两只小羊从两头走过来。桥很窄，只能过一只羊。它们谁也不让谁，都说是自己先到的。它们越吵越凶，最后在桥上顶了起来。结果两只羊都掉进了河里。",
+    "春天来了，天气一天比一天暖和。小草从土里钻出来，柳树长出了新的叶子。河里的冰化了，水哗哗地流。小鸟从远处飞回来，在树上做窝。田野里，农民开始种地。孩子们脱下厚厚的衣服，在草地上跑来跑去。",
+    "秋天，果园里到处都是果子。苹果红了，梨黄了，葡萄一串一串地挂在架上。爷爷拿着篮子去摘果子，我也跟着去帮忙。我摘了一个最大的苹果，擦干净，咬了一口，又甜又脆。爷爷说，今年的果子比去年多。",
+    "我的一天从早上六点半开始。我先起床洗脸，然后吃早饭。七点半我到学校，上午有四节课。中午我在学校吃饭，吃完饭可以在教室里休息一会儿。下午上完两节课，我就和同学一起回家。晚上我写完作业，看一会儿书，九点半睡觉。",
+    "学校开运动会那天，天气特别好。我参加了跳远和接力跑。跳远的时候，我第一次没有跳好，第二次我用力跑，跳得比第一次远。接力跑的时候，我跑最后一棒。接过棒以后，我一直往前跑，听见同学们在旁边喊加油。我们班最后得了第二名。",
+    "星期天早上，妈妈在打扫房间。我看见她一个人忙，就走过去说，我来帮你。我先把桌子上的东西放好，然后擦桌子。妈妈扫地，我拖地。做完以后，我们都很累，可是房间变得很干净。妈妈说，你真是我的好帮手。",
+    "爸爸带我去动物园。我们先看了大象，它的鼻子很长，耳朵很大。然后我们去看猴子，猴子在树上跳来跳去，有一只还向我们要东西吃。最后我们去看老虎，老虎躺在那里，一动也不动。我发现，动物园里的动物看起来都很安静。",
+    "那天下雨，我留在教室里写作业。雨点打在窗户上，声音很轻。我写完作业，站在门口看雨。雨里的树很绿，路上的水像小河一样流。等了很久，雨才慢慢小了。我背着书包回家，路上一个人也没有。",
+    "爷爷在屋子后面开了一块菜地。他种了白菜、萝卜和豆角。每天下午，他都去菜地里浇水、拔草。我有时候也跟着去。爷爷说，种菜要有耐心，不能着急。过了两个月，菜地里长满了绿油油的菜。",
+    "那次数学考试，我只考了七十多分。回家的路上，我一直不敢说话。妈妈看了卷子，没有生气，只是问我哪里不会。我们一起把错的题又做了一遍。我发现，有几道题不是不会，而是太着急，看错了题目。从那以后，我做题以前都会先读两遍。",
+    "我和同桌因为一块橡皮吵了起来。我说是我的，他说是他的。我们谁都不理谁，一个下午都没有说话。放学的时候，他走过来，把橡皮放在我的桌子上，说，我们一人一半吧。我愣了一下，笑了。第二天，我们又一起去打球了。",
+    "我八岁那年开始学骑自行车。一开始，爸爸在后面扶着车。我一骑上去就害怕，总是往一边倒。爸爸说，眼睛要看前面，不要看脚下。我试了很多次，摔了两次，膝盖上破了一点皮。后来有一次，我骑出去很远，回头一看，爸爸早就松手了。",
+    "我第一次做饭是煮面条。水开了以后，我把面条放进去，可是不知道该煮多久。我只好一直看着，还用筷子挑起来尝了尝。面条煮好了，我放了盐和一点青菜。妈妈回来吃了一口，说有点咸。不过她还是把一碗都吃完了。",
+    "周末，我去图书馆看书。图书馆里很安静，大家都在低头看书。我找了一本讲星星的书，坐在窗边看。书里说，我们看到的星光，是很久以前发出来的。我看得入了神，一直到图书馆要关门了，我才回家。",
+    "下雪了，雪花一片一片地落下来。屋顶上、树上、路上，很快都白了。弟弟第一次看见雪，高兴得叫起来。我们跑到院子里，用手接雪花。雪落在手上，一会儿就化了。我们还堆了一个小小的雪人，用两颗石子做眼睛。",
+    "夏天的晚上，我们一家人在院子里吃饭。天慢慢黑下来，风也凉了。吃过饭，奶奶搬出小凳子，我们坐在院子里。远处有青蛙叫，天上有星星。奶奶说，她小时候也是这样过夏天的。",
+    "我家的小狗叫豆豆。它有一身黄色的毛，眼睛圆圆的。豆豆最喜欢和我一起玩球。我把球扔出去，它就飞快地跑过去，把球叼回来。有时候它跑得太急，会摔一跤，但是它马上又爬起来。",
+    "我在阳台上种了几颗豆子。我先把豆子泡在水里，第二天它们就变大了一点。然后我把它们放进土里，每天浇水。过了五六天，土里冒出了小小的芽。芽一天比一天高，后来还长出了两片叶子。",
+    "我们班有一个植物角，放在教室的窗边。同学们把自己养的花搬来，有绿萝、仙人掌，还有一盆小小的竹子。老师说，植物角由大家轮流照顾。轮到我照顾的时候，我每天都记得给它们浇水。",
+    "那天轮到我做值日。放学以后，同学们都走了，我和另外一个同学留下来。我扫地，他擦黑板。扫到一半，我发现桌子底下有一支笔，就把它放在讲台上。做完值日，教室干干净净的，我心里很高兴。",
+    "早上，我跟奶奶去菜市场。菜市场里人很多，有卖鱼的，有卖菜的，还有卖早点的。奶奶买了一条鱼，又买了几个西红柿。卖菜的阿姨多给了我们一把葱。回家的路上，奶奶说，买菜也要会看，要挑新鲜的。",
+    "夏天的晚上，我和爸爸在院子里看星星。爸爸指给我看，哪是北斗七星，哪是银河。他说，很久以前，人们就是靠星星来认路的。我看着看着，觉得天上的星星越来越多。",
+    "那天下午，天突然阴了。我想起妈妈没有带伞，就拿着一把伞去车站等她。等了很久，车才来。妈妈下车看见我，又惊又喜。回家的路上，我们两个人打着一把伞，我的肩膀都湿了。",
+    "我在路上捡到一个钱包。钱包里有几十块钱，还有一张卡片。我站在原地等了一会儿，没有看见有人来找。我就把钱包交给了路边的商店，请他们帮忙。第二天，丢钱包的人找到了我，一直说谢谢。",
+    "小猫跟着妈妈出门，走着走着就看不见妈妈了。它有点害怕，站在路口叫了起来。一只小狗走过来，问它怎么了。小猫说，我找不到妈妈了。小狗说，我带你去找。它们沿着来时的路往回走，终于看见了正在找小猫的猫妈妈。",
+    "路边有两棵树，一棵很高，一棵很小。大树常常笑小树，说你怎么这么矮。小树不说话，只是每天努力地长。过了几年，小树长高了很多。有一年刮大风，大树被吹倒了一根树枝，小树却好好地站着。",
+    "两只蚂蚁在草地上找到一粒米。它们一起抬，可是米太重了，怎么也抬不动。一只蚂蚁说，我们回去叫伙伴吧。它们回到洞里，把消息告诉了大家。一会儿，来了很多蚂蚁，大家一起用力，把米抬回了洞里。",
+    "有一颗种子，身上长着薄薄的翅膀。风一吹，它就飞起来。它飞过田野，飞过小河，最后落在一块空地上。第二年春天，那里长出了一棵小树。小树想，我是从哪里来的呢。",
+    "森林里要开音乐会了。小鸟唱歌，青蛙打鼓，蟋蟀拉琴。小兔子不会唱歌，也不会打鼓，它就在旁边跳舞。大家说，你的舞跳得真好。小兔子听了，跳得更高兴了。",
+    "小水滴住在云里。有一天，云变得很重，小水滴就落了下来。它落在一片叶子上，又滚到地上，流进了小溪。小溪把它带到河里，河里把它带到大海。太阳出来以后，小水滴又慢慢升到天上，回到了云里。",
+    "妈妈出门前，让我给外婆打个电话。我拿起电话，先说了您好，然后说，外婆，妈妈说晚上来看您。外婆在电话里笑了，说知道了，我给你们做好吃的。挂了电话，我觉得打电话也没有那么难。",
+    "春游那天，我们坐车去郊外。车开了很久，窗外的房子越来越少，田野越来越多。到了以后，我们在草地上铺开布，把带来的食物放在一起。老师让我们先看看周围的树和花，再找一找有没有小虫子。中午，大家一起吃饭，吃完饭还玩了一会儿游戏。",
+    "去年夏天，爸爸教我去游泳。刚开始，我不敢把头放进水里，一进水就站起来。爸爸说，先学会在水里吐气。我练了好几天，才敢让脚离开地。后来我学会了游几米，虽然游得慢，但是我很高兴。",
+    "停电的那个晚上，我们点了一根蜡烛。屋子里很暗，只有烛光在墙上晃。妈妈把蜡烛放在桌子中间，我们围着桌子说话。没有了电视，说话的时间反而变多了。弟弟说，他喜欢这样的晚上。",
+    "爷爷常常给我讲他小时候的事。他说，那时候村子里没有电，晚上点的是油灯。上学要走很远的路，书包里只有两本书。冬天很冷，脚上穿的是布鞋。我听了，觉得我现在的生活真是太好了。",
+    "我在院子里观察蚂蚁。它们排成一条长长的队伍，一直走到一块掉在地上的饼干旁边。有的蚂蚁抬，有的蚂蚁推。我把饼干挪开了一点，队伍乱了一会儿，很快又找到了饼干。我觉得蚂蚁很聪明。",
+    "学校的午饭很好吃。每天中午下课，大家都排队去食堂。食堂里很吵，但是饭菜很香。我最喜欢星期三的番茄炒蛋。吃完饭，我们把盘子放好，然后去操场上走一走。",
+    "运动会结束以后，我们班的同学都很累，但是大家都不想回家。我们坐在操场边，一边喝水，一边说比赛的事。有人说，下次我们一定要拿第一。老师说，名次不重要，重要的是大家都尽力了。",
+    "每天上学的路上，我要经过一座小桥。桥下有一条河，河边种着柳树。春天的时候，柳枝垂到水面上。有一次，我看见一只白鸟站在河里，等了很久，才一下子把头扎进水里。",
+    "我和好朋友之间发生过一次误会。那天我借了他的书，还的时候放在了桌子上。他却说没有看见，还说我说话不算数。我很生气，我们两天没有说话。第三天，他在自己的抽屉里找到了那本书，跑来向我道歉。",
+    "小猫第一次出门，什么都觉得新鲜。它看见一只蝴蝶，就追了过去。它看见一片落叶，又用爪子拨了拨。走到路口的时候，一辆车开过来，它吓了一跳，赶快跑回家里。",
+    "我的自行车坏了。骑起来总是发出声音，后来链子还掉了。爸爸把车翻过来，找了工具，一点一点地修。我在旁边帮他递东西。修好以后，车骑起来很轻，一点都不响了。",
+    "楼下送报纸的是一位老爷爷。他每天早上七点就来，把报纸放在每家的门口。有一天下雨，他把报纸包在塑料袋里，自己却淋湿了。我看见了，给他倒了一杯热水。",
+    "我第一次洗碗的时候，把碗打碎了一个。妈妈说，洗碗要轻一点，先把碗里的东西倒掉，再一个一个地洗。我照着她说的做，后来一个也没有打碎。",
+    "我在花盆里种了一颗向日葵。刚开始，它长得很慢，我每天都去看它。后来它长得比我还高，顶上开了一个很大的花盘。我查了书才知道，向日葵的花盘会跟着太阳转。",
+    "隔壁搬来了一户新邻居，家里有一个和我差不多大的孩子。刚开始，我们都不说话。有一天，他在楼下玩球，球滚到我脚边，我捡起来递给他。就这样，我们认识了。",
+    "清明节那天，我们一家人去山上。山上的草刚绿，路两边开着一些小花。我们慢慢地走，爸爸给我讲了爷爷的爷爷的事。下山的时候，天有点阴了，我们走得更快了一些。",
+    "雨停了以后，天边出现了一道彩虹。我和弟弟跑到院子里看。彩虹有七种颜色，从红到紫，一道一道排着。弟弟问我，彩虹是怎么来的。我说，是太阳光照在小水珠上变成的。他说，那我们去追它吧。我们跑出很远，彩虹却一直离我们很远。",
+    "我第一次坐火车是去外婆家。火车很长，一节一节连在一起。上车以后，我把书包放在架子上，坐在窗边。窗外的树和房子都在往后退，速度越来越快。中午，我吃了妈妈带的饭。到了下午，火车进了站，外婆已经在站台上等我们了。",
+    "邻居家有一只花猫。它常常趴在窗台上，看着外面。我放学回家的时候，它会在窗台上站起来，好像在跟我打招呼。有一次，它跑到我们家门口，我叫了它一声，它就走过来，在我脚边转了几圈。",
+    "我们班的角落里有一个书架，是老师带着我们一起做的。同学们把自己的书带来，放在书架上，谁想看就自己拿。书架旁边贴着一张纸，写着借书要还。我最喜欢那里的一本讲动物的书，看了好几遍。",
+    "放学的时候，我看见一位老奶奶站在路口。她提着一个很重的袋子，好像想过马路。路上的车很多。我走过去说，奶奶，我帮您提吧。她说谢谢。我们一起等到车少了，才慢慢地走过去。",
+    "小狗豆豆有一天不见了。我找了很多地方，都没有找到。妈妈帮我在小区里问了一圈，也没有人看见。天快黑的时候，我听见门口有声音。打开门，豆豆站在那里，身上有很多土。它大概是自己跑出去玩，找不到路了。",
+    "手工课上，老师教我们用纸做小船。我折了三次才折好。第一次折得歪了，第二次船底破了。第三次我慢慢地折，终于做好了。老师让我们把船放进水盆里。我的船在水上漂了很久，最后才慢慢沉下去。",
+    "周末，我们家做了一次大扫除。爸爸擦窗户，妈妈洗窗帘，我负责收拾自己的东西。我把桌子上的纸和笔分类放好，把不用的东西装进袋子。忙了一上午，家里看起来亮了很多。",
+    "春天的田野是绿色的。麦苗长到脚踝那么高，风一吹，就像水一样起伏。田边开着一些小黄花，蜜蜂在花上飞来飞去。远处有几个人在干活，他们的身影在阳光下很小。",
+    "爷爷有一台旧收音机。他每天早上都要打开听新闻，晚上听戏。收音机有时候会出声音不清楚，他就用手拍一拍，或者把天线拉长。他说，这台机器比我还大几岁。",
+    "我们家吃晚饭的时候，大家都会说说话。爸爸说单位的事，妈妈说今天买了什么菜，我说学校里发生的事。有时候意见不一样，也会争几句。饭吃完了，话还没说完。",
+    "有一次，我们一家人去露营。我们找了一块平地，搭起帐篷。晚上，我们在帐篷外面生了一小堆火。火光照在脸上，很暖和。夜里我听见风的声音，还有不知名的虫子在叫。",
+    ] },
+    { id: 'L3', name: '初中语文', docs: [
+    "白天抬头看天，天空是蓝色的；到了傍晚，天边却常常变成红色。这是为什么呢？太阳光看起来是白色的，其实是由许多颜色的光组成的。阳光进入大气层以后，会遇到空气里的小颗粒。波长较短的光，比如蓝光，容易被这些颗粒向四面八方散开，所以我们抬头时，看到的到处都是蓝光。傍晚时，阳光要穿过更厚的大气，蓝光大多被散掉了，剩下的红光和橙光就照到了我们的眼睛里。",
+    "地球上的水一直在不停地流动。太阳照射海洋、湖泊和地面，水变成水蒸气升到空中，这个过程叫蒸发。水蒸气遇冷以后，会凝结成许多小水滴，聚在一起就成了云。云里的水滴越来越大，空气托不住的时候，就落下来，形成雨或雪。落下的水一部分流进河里，一部分渗进土里，最后又回到海洋。这个不断重复的过程，就是水循环。",
+    "蜜蜂在花丛中飞来飞去，它们是怎么找到花的呢？首先，花有颜色和形状，蜜蜂的眼睛能够分辨出不同的颜色，尤其是蓝色和黄色。其次，花有气味，蜜蜂的触角能够闻到很远的地方传来的香味。此外，蜜蜂还能看见人眼看不见的紫外光，有些花在紫外光下会出现特别的图案，像路标一样指向花蜜。找到花以后，蜜蜂会把位置告诉同伴，它通过跳舞的方式，让同伴知道方向和距离。",
+    "很久以前，人们过河要靠小船，或者等河水变浅。后来，人们在河上搭起了木桥和石桥。石桥很结实，但是建起来很慢，也很费力。到了近代，人们开始用钢铁和水泥造桥，桥可以建得更长、更高。现在，有些大桥横跨海峡，汽车和火车都能从上面通过。桥的变化，其实就是人们不断想办法、不断改进的过程。",
+    "汉字是世界上仍在使用的最古老的文字之一。最初的汉字很多是画出来的，比如日、月、山、水，看形状就能猜到意思。后来，人们把这些图画简化成线条，又把一些字组合起来表达新的意思，比如把日和月放在一起，表示明亮。汉字经过几千年的变化，从甲骨文、金文，一直发展到今天的样子。虽然写法变了，但是它记录语言、传递经验的作用一直没有变。",
+    "爷爷有一块旧手表，表带已经磨得发亮。有一天，表突然不走了。我劝他换一块新的，他却摇摇头，说这块表跟了他四十年。我们找到一位修表的老人。老人打开表壳，里面的零件小得像米粒。他看了很久，说有一个齿轮坏了。三天以后，表又走了起来。爷爷把它戴在手上，听了听，笑了。",
+    "初二那年，我报名参加了学校的演讲比赛。刚开始，我每天都练习，把稿子背得很熟。可是临近比赛，我忽然害怕起来，总觉得自己讲得不好，甚至想放弃。比赛那天，我站在台上，看见下面那么多人，脑子一下子空了。我停了几秒，才慢慢想起来。最后我只得了三等奖。现在回想，我最后悔的不是名次，而是那几天没有继续练下去。",
+    "老屋在村子的最东边，墙是土做的，屋顶上长着几根草。我小时候在那里住过几年。屋前有一棵枣树，夏天的时候，树阴能盖住半个院子。后来我们搬到了城里，老屋就空了下来。去年回去，门已经歪了，枣树还在，只是没有人再摘它的果子。",
+    "那天下班，我在车站等车，雨下得很大。站台上只有几个人，大家都低着头看手机。一位老人拎着一个很重的袋子，站在雨里。一个年轻人把伞递过去，老人摆摆手，说自己马上就走。车来了，年轻人先扶老人上车，自己才上去。车门关上的时候，我看见他们两个人在车窗里说话。",
+    "有一次，我在公交车上看见一件小事。一位阿姨抱着孩子上车，车上已经没有座位了。她站在门口，一手扶着栏杆。过了一会儿，一个中学生站起来，把座位让给了她。阿姨说了声谢谢，坐下了。旁边的人都没有说话，但是有几个人往旁边挪了挪，给她让出一点空间。到站以后，那个中学生下车了，我记住了他背着的书包的颜色。",
+    "有人问，读书有什么用？如果只从能不能马上换来好处来看，读书确实常常看不出用处。但是，读书能让人看见自己没有经历过的生活，理解自己没有想到过的想法。一个人读过的书，会慢慢变成他看世界的方式。所以，读书的意义不在于记住多少知识，而在于让人变得更有判断力，也更愿意去理解别人。",
+    "我们常常希望事情快一点：快点长大，快点成功，快点得到答案。可是有些事，快不起来。一棵树要长很多年才能成材，一个人要经过很多次失败才能熟练。慢下来，并不是浪费时间，而是给事情留下它需要的时间。当我们愿意慢一点，反而更容易看清自己到底在做什么。",
+    "诚实有时会让人吃亏。说了实话，可能会被批评，可能会失去一次机会。但是如果为了眼前的好处而说谎，失去的往往是别人对你的信任。信任建立起来很慢，破坏起来却很快。一个人只要说过一次谎，别人以后再听他的话，就会多想一想。从这个角度看，诚实不只是品德问题，也是一种长远的打算。",
+    "习惯的力量很大，因为它不需要我们每次都下决心。每天读十页书，一年就是三千多页；每天多走一千步，一年下来就是很远的路。反过来，每天多看半小时手机，一年也会积成很多时间。习惯之所以重要，是因为它把选择变成了自动的事情。所以，与其每次都靠意志力，不如想办法把好的行为变成习惯。",
+    "学习并不只是为了考试。考试能检验我们学会了多少，但是考试之外，还有很多东西值得学。比如，学会怎样提出问题，学会在找不到答案的时候继续找，学会和别人合作。这些能力在试卷上看不出来，却会在以后的生活里不断用到。所以，成绩重要，但是不要把它当成唯一的标准。",
+    "山里的学校只有两间教室，一共三十多个学生。老师姓李，一个人教语文和数学。每天早上，他要走四十分钟的山路来学校。冬天教室里很冷，他就让学生们先跑一跑再上课。有一年，一个学生考上了县里的中学，李老师送他到镇上，回来的时候天已经黑了。",
+    "我家门前那条河，以前水很清，能看见河底的石头。后来上游建了工厂，河水慢慢变黑，夏天还有味道。几年前，工厂搬走了，河边种上了树。现在水又清了一些，偶尔能看见小鱼。一条河的变化，其实和我们每个人的选择都有关系。",
+    "外婆的手很粗糙，指节有些大。她年轻时在田里干活，后来又在家里做饭、洗衣、带孩子。她的手会做很多事：会包粽子，会缝衣服，会在冬天把被子晒得暖暖的。有一次我握住她的手，发现她的手心是热的。她说，人老了，手就不中用了。我说，这双手做过的事情，比很多人的一辈子都多。",
+    "村子里有一口井，井水很甜。有一年天旱，别的井都干了，只有这口井还有水。村里的人排队来打水，从早到晚都有人。有一个外村的人来打水，有人不愿意，说水本来就不多。看井的老人说，让他打吧，谁都有难的时候。那年夏天，井水一直没有干。",
+    "巷子口有一个修鞋的人。他每天早上推着小车来，晚上再推回去。他的工具很简单：一把锥子，一些线，几块皮子。有人来修鞋，他先看看，然后说，这个还能修。他修得很慢，但是很结实。有一次我问他，为什么不换个轻松点的活。他说，修鞋的人少了，总得有人修。",
+    "班里组织了一次辩论，题目是中学生在家里该不该做家务。正方说，做家务能培养责任感，也能让父母轻松一些。反方说，学生的时间有限，应该把时间用在学习上。双方都举了很多例子。最后老师说，这个题目没有标准答案，重要的是你们有没有认真想过对方的理由。那节课以后，我回家主动洗了一次碗。",
+    "城市里有便利的交通、医院和图书馆，乡村里有安静的夜晚和开阔的田野。有人喜欢城市的热闹，也有人喜欢乡村的从容。其实，两种生活各有各的难处：城市里节奏快，人和人之间容易疏远；乡村里机会少，很多事情不方便。与其争论哪里更好，不如想一想，怎样才能让两种生活都变得更好一些。",
+    "我们每天都在记忆，也每天都在遗忘。有些事记得很清楚，比如第一次学骑车时摔倒的地方；有些事转眼就忘，比如昨天中午吃了什么。研究发现，遗忘并不完全是坏事。如果什么都记得，大脑会被无数的细节填满，反而难以做出判断。遗忘帮我们筛掉不重要的东西，让重要的部分留下来。",
+    "植物不会说话，但它们并不是完全没有交流。有的植物在受到虫子咬的时候，会释放出某种气味，附近的同类闻到以后，会提前做出防备。有的树的根会和别的树的根连在一起，彼此传递养分。科学家对这些现象的了解还很有限，但至少说明，自然界里的联系，比我们想象的要复杂。",
+    "同样是一小时，等人的时候觉得特别长，做喜欢的事情时却一下子就过去了。时间本身并没有变快或变慢，变的是我们的感受。当我们专心做一件事的时候，注意力都放在事情上，就很少去注意时间。所以，与其抱怨时间不够，不如想一想，自己的注意力都放在了哪里。",
+    "那次考试，我准备了很久，结果还是没考好。走出考场的时候，我觉得很委屈，甚至想以后再也不努力了。后来老师找我谈话，他说，努力不一定马上有结果，但是不努力一定没有结果。他还说，失败最大的用处，是让人知道自己哪里还不会。我把卷子重新做了一遍，发现自己确实有几个地方一直没有弄懂。",
+    "城市的早晨是从五点半开始的。天还没亮，清扫车已经开过了主干道，早点摊的灯一盏一盏亮起来。六点多，公交车一辆接一辆地进站，车上的人大多闭着眼睛。七点，学校门口挤满了学生和家长，喇叭声、说话声混在一起。到了八点，街上忽然安静下来，只剩下阳光一点点爬上楼顶。",
+    "为什么会有四季？这和地球的运动有关。地球一边自转，一边绕着太阳公转。地球的自转轴是倾斜的，所以一年当中，不同地区接收到的阳光多少不一样。阳光直射的时候，地面得到的能量多，天气就热；阳光斜射的时候，同样的光分散到更大的面积上，天气就冷。四季的变化，就是这种倾斜带来的结果。",
+    "在纸发明以前，人们把字写在骨头、竹片和丝上。竹片很重，一部书要装好几辆车；丝很贵，普通人用不起。后来，人们用树皮、麻和破布做成纸，纸又轻又便宜，写字变得容易了。再后来，印刷术出现，一本书可以印很多份。知识的传播，就这样一步一步地快了起来。",
+    "搬家那天，我们把东西装了满满一车。我最后进屋看了一遍，墙上还留着我小时候画的一道线，那是量身高用的。窗台上有一盆花，妈妈说带不走，就送给了邻居。车开出去的时候，我回头看了一眼，那扇窗户在阳光下很亮。到了新家，一切都是陌生的，我用了很久才记住回家的路。",
+    "有一年冬天，我从外婆家回来，天已经黑了。路上没有灯，只有月光照在雪上。我走得很快，听见自己的脚步声。走到一半，我忽然听见后面有声音，回头看，什么也没有，是一根树枝被风刮断了。我站了一会儿，觉得没有那么怕了。剩下的路，我走得很慢，还抬头看了看星星。",
+    "技术让生活方便了很多。以前写一封信要走几天，现在一条消息马上就能到；以前查资料要跑图书馆，现在在手机上就能找到。但是，方便也带来新的问题。消息太多，人容易分心；答案太容易得到，人就不太愿意自己去想。所以，重要的不是拒绝技术，而是学会怎么用它，而不是被它牵着走。",
+    "声音是怎样传到我们耳朵里的？声音其实是空气的振动。比如敲鼓的时候，鼓面来回动，推动周围的空气，空气又推动更远的空气，这样一层一层传出去。传到耳朵里，鼓膜跟着振动，我们就听见了声音。在空气里，声音每秒大约走三百四十米；在水里走得更快，在钢铁里还要快得多。",
+    "母亲很少给我写信，她更习惯打电话。我上高中住校那年，她忽然寄来一封信。信里写的都是家里的小事：院子里的菜长高了，邻居家的孩子会走路了，父亲把旧自行车修好了。最后她写，家里都好，你不用挂念。那封信我看了很多遍，后来一直放在抽屉里。",
+    "两个朋友一起赶路，走到树林里，忽然遇见一只熊。一个人赶快爬到树上，另一个人来不及跑，只好躺在地上装死。熊走过来，用鼻子闻了闻，以为他死了，就走开了。树上的人下来以后问，熊跟你说了什么？地上的人说，它告诉我，遇到危险就自己跑的朋友，不能算朋友。",
+    "睡眠看起来什么都没做，其实大脑一直在工作。人在睡觉的时候，大脑会把白天学到的东西重新整理一遍，把重要的留下来，把不重要的慢慢淡忘。所以，睡得好的人，第二天记东西往往更容易。反过来，如果长期睡不够，注意力就会下降，情绪也容易变差。睡觉不是浪费时间，而是学习的一部分。",
+    "失败之后，人最容易做两件事：一是责怪自己，二是干脆放弃。责怪自己会让人越来越没有信心，放弃则让人失去本来可能得到的东西。其实，失败只是一次结果，它告诉我们这个方法不行，却没有说这件事不能做。真正有用的做法，是把失败当成一次检查：哪里出了问题，下次可以怎样改。",
+    "古镇的街道很窄，两边的房子挨得很近，屋檐几乎要碰到一起。下雨的时候，雨水顺着瓦片流下来，落在青石板上，声音很轻。街上的人不多，偶尔有一家小店开着门，卖些针线和点心。我在街上走了很久，觉得时间在这里好像慢了下来。",
+    "为什么会有影子？光沿直线传播，遇到不透明的物体时，物体后面就有一块光照不到的地方，这就是影子。影子的形状和物体有关，也跟光源的位置有关。早上太阳低，影子长；中午太阳高，影子短。古人很早就注意到这个规律，还用影子的长短来估计时间。",
+    "上个学期，我们班组织了一次去敬老院的活动。那天上午，我们带了自己做的点心和几首歌。到了以后，我们先帮老人打扫房间，然后坐下来陪他们说话。有一位老人讲了他年轻时的事，讲得很慢，我们听得很认真。回来的路上，大家都比平时安静。",
+    "坚持这两个字说起来容易，做起来难。刚开始做一件事的时候，人往往很有热情，可是过了一段时间，新鲜感消失了，困难却越来越多。这时候能不能继续，就成了分界线。坚持不是不感到累，而是在感到累的时候，仍然愿意再往前走一步。",
+    "巷子里有一家旧书店，门面很小，招牌已经褪了色。店里的书堆得很高，只留下一条窄窄的路。老板是个不爱说话的人，你问他在哪一类，他就用手指一指。我在那里买到过一本很旧的散文集，扉页上还写着别人的名字。",
+    "空气看不见，却很有力量。把一个空杯子倒过来按进水里，水进不去，是因为杯子里有空气。给自行车打气，气被压进轮胎里，轮胎就变硬了。风也是空气在流动，风大的时候，能把树枝吹弯，把屋顶上的东西吹走。",
+    "有一次，我从同学家回来，天已经很黑了。那条路没有路灯，两边是田。我一开始走得很急，后来发现越急越害怕，就慢慢走。我听见自己的脚步声，也听见远处狗叫。走到村口的时候，看见家里的灯亮着，心里一下子就松了。",
+    "手机让人随时能和别人联系，也让人很难安静下来。一条消息、一个提醒，就能把注意力拉走。有研究发现，被打断以后，人要花一段时间才能重新集中。所以，与其责怪自己不够专注，不如想一想，是不是应该在某些时候，把手机放到看不见的地方。",
+    "海水为什么是咸的？雨水落在地上，会带走土壤和岩石里的一点盐分，这些水汇成河流，最后流进大海。海水不断蒸发，盐却留了下来。经过很长很长的时间，海里的盐就越来越多。所以海水是咸的，而雨水是淡的。",
+    "我和同桌曾经因为一件小事闹过别扭。那天他借了我的笔，还回来的时候笔帽不见了。我说他不小心，他说本来就没有。我们谁也不理谁。过了两天，我在自己的书包底下找到了那个笔帽。我把它拿给他看，他笑了笑，说没关系。",
+    "很多事情一个人做不了，或者做得很慢。搬一张桌子，一个人抬不动，两个人就能抬起来。做一次班级活动，有人负责准备，有人负责主持，有人负责收拾，事情才做得完整。合作的关键不是每个人都一样能干，而是每个人都知道自己该做什么。",
+    "植物的根一般长在土里，它的作用是固定植物，同时吸收水分和养分。根上有许多细小的根毛，它们让根和土的接触面积变大，吸水更快。有些植物的根还会储存养分，比如萝卜和红薯。根看不见，却决定了植物能不能长好。",
+    "外公的院子里有一架葡萄。夏天，葡萄叶子铺满了架子，下面很凉快。外公每天下午都坐在那里，一边喝茶，一边看着院子。他说，年轻的时候他总想往外跑，现在觉得待在这里最好。我坐在他旁边，觉得时间过得很慢。",
+    ] },
+    { id: 'L4', name: '高中语文', docs: [
+    "语言不仅是交流的工具，也塑造着我们思考的方式。一个概念如果没有名字，人们就很难把它单独拿出来讨论；而一个词一旦被反复使用，它背后的分类方式也会悄悄进入我们的判断。不同的语言对颜色、亲属、时间的切分并不相同，这种差异并不意味着使用某种语言的人无法理解别的观念，但它提醒我们：我们以为理所当然的分类，往往只是众多可能中的一种。",
+    "人们常说时间就是金钱，但时间和金钱并不相同。金钱可以存起来，时间却只能被使用；金钱可以借，时间不能。更重要的是，时间的使用方式决定了我们会成为什么样的人。把时间花在什么地方，看起来是每天的小选择，累积起来却是一个人全部的生活。所以，真正值得思考的问题不是如何节省时间，而是如何不把时间浪费在并不重要的事情上。",
+    "好的提问往往比好的答案更重要。一个问题如果提得清楚，回答的方向就已经出现了一半；如果问题本身含糊，再多的讨论也容易各说各话。好的提问通常具备两个特点：一是它指向具体，而不是停留在抽象的口号；二是它允许被反驳，也就是说，存在能够否定它的证据。学会提问，其实是学会为自己的思考划定边界。",
+    "城市化带来了效率，也带来了代价。人口集中以后，医院、学校、交通都能以更低的成本运转，机会也更多；但与此同时，房价上涨、通勤变长、人与人之间的关系变得松散。这些问题并不是城市本身的错误，而是发展过快时来不及处理的结果。真正困难的地方在于，城市既要保持活力，又要让人活得体面，这两者有时并不一致。",
+    "常识是一种奇怪的知识：它几乎人人都有，却很难说清它从哪里来。常识大多来自长期的经验积累，它让我们在不假思索的情况下做出判断。但常识也可能是错的，尤其是在环境发生剧烈变化的时候。历史上许多重要的发现，最初都违背了当时的常识。因此，尊重常识和怀疑常识，同样重要。",
+    "记忆构成了我们对自己的理解。一个人如果失去了全部记忆，即使身体还在，也很难说还是原来那个人。但记忆并不可靠：每次回忆，我们都在重新组织过去，而不是原样播放。这就意味着，我们所认为的“我是谁”，在某种程度上是一个不断被修改的故事。接受这一点并不让人沮丧，反而说明人是可以改变的。",
+    "科学之所以可信，并不是因为科学家从不犯错，而是因为科学有一套纠正错误的机制。一个结论提出以后，别人可以重复实验，可以提出反例，可以用更好的方法检验。错误的结论也许能流行一时，但只要检验的渠道是开放的，它最终会被修正。科学的权威，来自它愿意承认自己可能错。",
+    "有些问题无法靠把事物拆开来解决。一个城市堵车，不是因为某一辆车开得慢；一个人的健康，也不只取决于某一项指标。这类由许多部分相互作用产生的结果，被称为复杂性。面对复杂问题，简单地加大投入往往无效，甚至适得其反。更可行的办法，是找到系统中真正起作用的那个环节，哪怕它看起来并不起眼。",
+    "审美看起来是主观的，但它并不完全是任意的。一个人觉得美的东西，往往与他过去的经验有关：他见过什么，读过什么，在什么样的环境里长大。这也是为什么同一件作品，在不同的人眼里会有完全不同的分量。审美可以争论，但争论的意义不在于说服对方，而在于让彼此看见自己经验之外的部分。",
+    "孤独并不等于寂寞。寂寞是想要有人陪却没有，孤独则是一种状态：即使身边有人，也可能感到自己与周围隔着一层。有些人害怕孤独，于是用各种声音把它填满；也有人学会与它相处，在安静里整理自己的想法。很难说哪种更好，但可以确定的是，一个人如果不能独处，往往也很难真正与他人相处。",
+    "那条河从我记事起就在那里。小时候，河面比现在宽，夏天有人在里面游泳，冬天结了冰，孩子们在冰上跑。后来上游修了水库，水少了，河滩露出来，长满了草。现在河边修了步道，晚上有人散步。河还是那条河，但每一代人记得的，都是不一样的河。",
+    "整理旧物的时候，我找到一张照片。照片上的人站成一排，穿着一样的衣服，笑得很拘谨。我认出了其中几个人，却怎么也想不起他们的名字。照片背面写着一个日期，算起来已经是二十年前。我忽然意识到，那些当时觉得会记一辈子的事，早就模糊了，只剩下这张纸还留着一点证据。",
+    "每一个选择都意味着放弃。选择了这条路，就看不到另一条路上的风景；把时间用在这件事上，就不能同时用在别处。人们常常希望两全，但更多的时候，我们只能比较哪一种代价更可以接受。承认代价的存在，反而能让选择变得清楚：不是寻找没有损失的道路，而是想明白自己愿意承担什么。",
+    "效率是一个容易被误解的词。它指的是用更少的投入得到更多的产出，但产出是什么，却常常没有人追问。如果方向错了，效率越高，偏离得越远。所以，在追求效率之前，先要弄清楚自己在做什么、为什么做。否则，我们可能只是更快地做完了并不重要的事。",
+    "经典之所以被称为经典，不是因为它们古老，而是因为它们在不同的时代都能被重新理解。一部几百年前的作品，讲的可能是当时的事，但其中关于人的处境、选择的困难、情感的复杂，仍然能让今天的读者感到熟悉。读经典的意义，不在于记住结论，而在于借助前人的眼光，看见自己习以为常的东西。",
+    "技术从来不是中立的。它改变了人做事的方式，也改变了人对自己的理解。有了钟表，时间被切成可以计量的单位；有了地图，空间变成了可以规划的距离。每一次工具的进步，都会带来新的可能，也会带来新的限制。我们使用技术，同时也在被技术重新塑造。",
+    "自由并不意味着想做什么就做什么。如果每个人都随心所欲，结果往往是所有人都更不自由。真正的自由，是在不伤害他人的前提下，能够按照自己的意愿生活，也包括有能力为自己的选择负责。这样看来，自由既是一种权利，也是一种需要学习的能力。",
+    "现代人的焦虑，很多时候不是因为事情太多，而是因为选择太多。过去的人一生可能只做一份工作，住在同一个地方；现在的人面前有无数条路，每一条都意味着放弃其他可能。选择越多，越容易怀疑自己是不是选错了。缓解这种焦虑的办法，也许不是找到最好的选择，而是接受没有最好的选择。",
+    "传统常常被看作变化的对立面，但两者并不是完全相反的。传统之所以能留下来，往往是因为它曾经解决过某些问题；而变化之所以发生，是因为问题变了。真正有生命力的传统，不是原封不动地保存，而是在新的条件下被重新解释。拒绝变化和抛弃传统，看起来相反，其实都缺少对过去的理解。",
+    "理解一个人，比同情一个人更难。同情只需要站在自己的位置上感到难过；理解却要求暂时放下自己的判断，试着用对方的处境去看问题。这并不意味着同意对方，而是承认他的选择有他自己的理由。很多争执之所以无法解决，不是因为双方不够善良，而是因为谁都没有真正试着理解对方。",
+    "那座桥拆掉的那年，我已经离开了小镇。听说是因为太旧，承重不够。桥是石头的，桥面很窄，只能过一辆车。小时候我每天从桥上走过，桥下的水声很大。新桥建在上游，又宽又平，开车过去只要几秒钟。我想，以后大概不会有人记得，旧桥的中间有一块石头是松的。",
+    "雪下了一整夜，早上推开门，世界安静得有些不真实。屋顶、树枝、电线，都被雪盖住了，只有几行脚印从巷口一直延伸到远处。我站在门口看了很久，没有马上出去，怕踩坏了这片干净。后来太阳出来了，雪开始化，屋檐下滴着水。到中午，院子里只剩下一片湿痕。",
+    "知识是有边界的。我们知道的越多，就越清楚自己不知道的更多。这并不是一句谦虚的话，而是认识的一般规律：一个问题的答案，往往会带来更多新的问题。所以，真正有学问的人，通常不会轻易下结论，因为他们知道，在结论之外，还有许多尚未看清的部分。",
+    "偶然在人的一生中占的分量，常常被低估。出生在什么家庭，遇见什么样的老师，在某个时刻恰好读到一本书，这些都不是自己选择的，却深刻地影响了后来的一切。承认偶然的作用，并不会让人变得消极，反而让人更谦逊：成功里有运气的成分，失败也未必全是自己的过错。",
+    "语言的模糊有时是缺点，有时却是必要的。日常交谈中，很多话并不精确，但双方都能明白意思；如果把每句话都说得像法律条文，交流反而会变得困难。然而，在需要明确的地方，模糊就会带来麻烦。所以，重要的不是消灭模糊，而是知道什么时候需要精确，什么时候可以留有余地。",
+    "进步是一个让人安心的词，但它并不总是单向的。一个社会可能在技术上突飞猛进，同时在某些方面退步；一个人可能赚到了更多的钱，却失去了安静读书的能力。判断进步，需要先确定衡量的标准。如果标准只有一项，进步很容易变成一种错觉。",
+    "山是静的，海是动的。住在山里的人，习惯了看得见边界的生活；住在海边的人，习惯了远方什么也没有。两种生活都教会人一些东西：山让人知道自己的位置，海让人知道世界比想象的大。真正走过这两种地方的人，往往不会轻易说自己已经看懂了世界。",
+    "人常常追问意义，好像每件事都应该有一个理由。但有些事情，可能并不需要额外的意义：吃饭、走路、看一场日落，它们本身就是生活的一部分。追问意义能让人走得更远，也可能让人停在原地。或许更好的态度是，先认真地做，再回过头来看它意味着什么。",
+    "教育的意义，常常被简化为传授知识。但知识会过时，方法却可以迁移。一个人如果只学会了记住答案，遇到没有答案的问题就会束手无策；如果学会了怎样提出问题和检验想法，他就有可能在陌生的环境里自己找到路。教育的困难在于，它的成果往往要很多年以后才看得出来。",
+    "判断一个说法是否可信，要看它有没有证据，也要看证据是什么样的。个别的例子说服力有限，因为总能找到相反的例子；系统的观察和可以重复的实验，才更值得依赖。同时还要注意，证据是谁提供的，有没有可能被挑选过。怀疑并不意味着否定，而是要求理由。",
+    "每一种分类都有边界，而边界往往是模糊的。白天和黑夜之间有一段说不清的黄昏，成年和未成年之间也不只是生日那一天的区别。我们使用概念，是为了方便交流，但如果把概念当成事实本身，就会在边界处出错。承认模糊，是更准确地理解世界的第一步。",
+    "记忆像一条河，表面平静，底下一直在动。有些事被水流带走，再也找不回来；有些事沉在河底，过了很多年，忽然被一次偶然翻起来。我们以为自己在保存过去，其实一直在重新讲述它。讲述的次数越多，它离原来的样子就越远。",
+    "模仿是学习的起点。孩子学说话，先模仿大人的声音；学写字，先照着字帖一笔一笔地写。但模仿只是开始。如果一直停在模仿，就很难有自己的判断。真正有用的模仿，是在模仿中理解别人为什么这样做，然后把它变成自己的方法。",
+    "标准让事情可以比较，也让事情变得单一。用分数衡量学习，能看出差距，却看不出兴趣和耐心；用销量衡量一本书，能看出流行，却看不出它对人有什么影响。任何标准都会遗漏一些东西。选择标准的时候，其实是在选择我们重视什么。",
+    "沉默有时比说话更有力量。面对别人的痛苦，急着给建议，往往不如安静地听着；面对自己不懂的事，急着下结论，往往不如先不说话。沉默不是没有想法，而是知道此刻说什么都没有用。学会沉默，和学会表达一样难。",
+    "距离有两种，一种是空间上的，一种是心理上的。住得很近的人，可能一年也说不上一句话；相隔很远的人，却可能每天都能聊上几句。距离感来自了解的程度，而不是公里数。有时候，一句话就能把很远的距离拉近，也可能把很近的距离推开。",
+    "秩序让人安心，因为它让事情可以预期。排队、按时、按规矩办事，减少了人和人之间的摩擦。但秩序也有代价：它倾向于照顾大多数人的方便，而忽略少数人的特殊情况。一个好的秩序，应该既稳定，又留有调整的余地。",
+    "等待是生活里无法避免的部分。等车、等消息、等一个结果。等待之所以难，是因为它把控制权交了出去。有人用忙碌填满等待，有人干脆什么都不做。两种方式都没有错，重要的是不要在等待中把该做的事也放下了。",
+    ] }
+  ]
+};
+
+return {
+  version: 'zlm-1',
+  makeRng: makeRng, mm: mm, mmABt: mmABt, mmAtB: mmAtB, addBias: addBias, addBiasGrad: addBiasGrad,
+  gelu: gelu, geluGrad: geluGrad, lnForward: lnForward, lnBackward: lnBackward,
+  Model: Model, Trainer: Trainer, buildVocab: buildVocab, buildDataset: buildDataset, encodeText: encodeText,
+  b64FromF32: b64FromF32, f32FromB64: f32FromB64,
+  CURRICULUM_PRESETS: CURRICULUM_PRESETS, CORPUS: CORPUS
+};
+})();
+//</CORE>
+
+/* ============================== Worker 侧训练驱动 ============================== */
+var trainer = null;
+var running = false;
+var timer = null;
+var step0 = null;
+var currentPrompt = '小狐狸来到森林里。';
+var lastGenStep = -1, lastValStep = -1, lastSaveStep = -1;
+var lastTickTime = 0, tickTokens = 0, tpsEma = 0, sentHist = 0;
+
+function post(msg){ self.postMessage(msg); }
+function errText(e){ return (e && e.message) ? e.message : String(e); }
+
+function corpusInfo(){
+  return {
+    version: ZLM.CORPUS.version,
+    levels: ZLM.CORPUS.levels.map(function(lv){
+      var chars = 0;
+      for (var i = 0; i < lv.docs.length; i++) chars += lv.docs[i].length;
+      return { id: lv.id, name: lv.name, docs: lv.docs.length, chars: chars, sample: lv.docs[0] };
+    })
+  };
+}
+
+function historyOut(){
+  return {
+    train: trainer.history.train, val: trainer.history.val, lr: trainer.history.lr,
+    perLevel: trainer.history.perLevel, steps: trainer.history.steps, valSteps: trainer.history.valSteps
+  };
+}
+
+function stateOut(){
+  return { type: 'state', running: running, step: trainer ? trainer.step : 0 };
+}
+
+function statsOut(){
+  if (!trainer) return;
+  var st = trainer.status();
+  st.type = 'stats';
+  st.running = running;
+  st.tps = Math.round(tpsEma);
+  var h = trainer.history;
+  st.losses = h.train.slice(sentHist);
+  st.lrs = h.lr.slice(sentHist);
+  st.lossSteps = h.steps.slice(sentHist);
+  sentHist = h.train.length;
+  post(st);
+}
+
+function doGenerate(reason){
+  if (!trainer) return;
+  try {
+    var g = trainer.generate(currentPrompt, trainer.hp.genLength, trainer.hp.temperature);
+    var snap = { step: trainer.step, prompt: currentPrompt, text: g.text };
+    trainer.snapshots.push(snap);
+    if (trainer.snapshots.length > 60) trainer.snapshots.shift();
+    post({ type: 'generated', reason: reason, snapshot: snap, step: trainer.step, prompt: currentPrompt, text: g.text });
+    lastGenStep = trainer.step;
+  } catch (e) { post({ type: 'error', message: '生成失败：' + errText(e) }); }
+}
+
+function doValidate(){
+  try {
+    var v = trainer.validate();
+    lastValStep = trainer.step;
+    post({ type: 'val', step: v.step, perLevel: v.perLevel, mean: v.mean, running: running });
+  } catch (e) { post({ type: 'error', message: '验证失败：' + errText(e) }); }
+}
+
+function doAutosave(){
+  try {
+    var ck = trainer.checkpoint({ step0: step0 });
+    post({ type: 'checkpoint', auto: true, step: trainer.step, json: JSON.stringify(ck) });
+    lastSaveStep = trainer.step;
+  } catch (e) { post({ type: 'error', message: '自动保存失败：' + errText(e) }); }
+}
+
+function tick(){
+  timer = null;
+  if (!running || !trainer) { statsOut(); return; }
+  var t0 = Date.now(), steps = 0;
+  while (Date.now() - t0 < 40){
+    trainer.trainStep();
+    steps++;
+    if (trainer.step % trainer.hp.valInterval === 0) doValidate();
+    if (trainer.step % trainer.hp.sampleInterval === 0) doGenerate('auto');
+    if (trainer.step % trainer.hp.autosaveInterval === 0) doAutosave();
+    if (trainer.step % 5 === 0) statsOut();
+    if (!running) break;
+  }
+  var now = Date.now(), dt = now - (lastTickTime || now);
+  lastTickTime = now;
+  tickTokens += steps * trainer.hp.batchSize * trainer.model.ctx;
+  if (dt > 0){
+    var inst = tickTokens * 1000 / dt;
+    tpsEma = tpsEma ? tpsEma * 0.7 + inst * 0.3 : inst;
+    tickTokens = 0;
+  }
+  statsOut();
+  if (running) timer = setTimeout(tick, 0);
+}
+
+function stopLoop(){
+  running = false;
+  if (timer){ clearTimeout(timer); timer = null; }
+}
+
+function startLoop(){
+  if (!trainer || running) return;
+  running = true;
+  lastTickTime = Date.now();
+  tickTokens = 0;
+  tick();
+  post(stateOut());
+}
+
+self.onmessage = function(ev){
+  var msg = ev.data || {};
+  try {
+    switch (msg.type){
+      case 'ping':
+        post({ type: 'pong' });
+        break;
+
+      case 'init': {
+        if (msg.prompt) currentPrompt = msg.prompt;
+        trainer = new ZLM.Trainer({
+          corpus: ZLM.CORPUS,
+          maxVocab: msg.maxVocab || 1200,
+          modelConfig: msg.modelConfig || { nLayer: 2, nHead: 4, dModel: 64, ctx: 64 },
+          seed: msg.seed === undefined ? 20240601 : msg.seed
+        });
+        if (msg.hp) trainer.setHp(msg.hp);
+        step0 = trainer.generate(currentPrompt, trainer.hp.genLength, trainer.hp.temperature);
+        step0 = { prompt: currentPrompt, text: step0.text };
+        post({
+          type: 'ready', info: corpusInfo(), status: trainer.status(), step0: step0,
+          history: historyOut(), snapshots: trainer.snapshots, running: false
+        });
+        lastGenStep = 0;
+        sentHist = trainer.history.train.length;
+        break;
+      }
+
+      case 'start':
+        startLoop();
+        break;
+
+      case 'pause':
+        stopLoop();
+        doAutosave();
+        statsOut();
+        post(stateOut());
+        break;
+
+      case 'step': {
+        stopLoop();
+        var n = Math.max(1, Math.min(50, msg.n || 1));
+        for (var i = 0; i < n; i++) trainer.trainStep();
+        doValidate();
+        doGenerate('manual');
+        statsOut();
+        post(stateOut());
+        break;
+      }
+
+      case 'reset': {
+        stopLoop();
+        if (msg.modelConfig) trainer.modelCfg = msg.modelConfig;
+        trainer.reset(true);
+        step0 = trainer.generate(currentPrompt, trainer.hp.genLength, trainer.hp.temperature);
+        step0 = { prompt: currentPrompt, text: step0.text };
+        lastGenStep = 0; lastValStep = -1; lastSaveStep = -1;
+        tpsEma = 0; sentHist = trainer.history.train.length;
+        post({
+          type: 'reset', info: corpusInfo(), status: trainer.status(), step0: step0,
+          history: historyOut(), snapshots: [], running: false
+        });
+        break;
+      }
+
+      case 'hp':
+        trainer.setHp(msg.patch || {});
+        if (msg.prompt) currentPrompt = msg.prompt;
+        statsOut();
+        break;
+
+      case 'curriculum':
+        trainer.setCurriculum(msg.patch || {});
+        statsOut();
+        break;
+
+      case 'prompt':
+        currentPrompt = msg.prompt || currentPrompt;
+        break;
+
+      case 'generate':
+        if (msg.prompt) currentPrompt = msg.prompt;
+        doGenerate(msg.reason || 'manual');
+        break;
+
+      case 'attention':
+        post({ type: 'attention', data: trainer.attention(msg.prompt || currentPrompt) });
+        break;
+
+      case 'embeddings':
+        post({ type: 'embeddings', data: trainer.embeddingPoints(msg.limit || 120) });
+        break;
+
+      case 'checkpoint': {
+        var ck = trainer.checkpoint({ step0: step0 });
+        post({ type: 'checkpoint', auto: false, step: trainer.step, json: JSON.stringify(ck) });
+        break;
+      }
+
+      case 'restore': {
+        stopLoop();
+        try {
+          var parsed = typeof msg.json === 'string' ? JSON.parse(msg.json) : msg.json;
+          trainer.restore(parsed);
+          step0 = parsed.step0 || step0;
+          if (msg.prompt) currentPrompt = msg.prompt;
+          lastGenStep = trainer.step; lastValStep = trainer.step; lastSaveStep = trainer.step;
+          tpsEma = 0; sentHist = trainer.history.train.length;
+          post({
+            type: 'restored', status: trainer.status(), step0: step0,
+            history: historyOut(), snapshots: trainer.snapshots, running: false
+          });
+        } catch (e) {
+          post({ type: 'error', message: errText(e) });
+        }
+        post(stateOut());
+        break;
+      }
+
+      case 'info':
+        post({ type: 'info', info: corpusInfo(), status: trainer ? trainer.status() : null });
+        break;
+    }
+  } catch (e) {
+    stopLoop();
+    post({ type: 'error', message: errText(e) });
+    post(stateOut());
+  }
+};
+</script>
+<script>
+(function(){
+'use strict';
+
+var DEFAULT_PROMPT = '小狐狸来到森林里。';
+var ARCHS = {
+  teach: { nLayer: 2, nHead: 4, dModel: 64, ctx: 64 },
+  adv: { nLayer: 3, nHead: 4, dModel: 96, ctx: 128 }
+};
+var LEVEL_COLORS = ['#68d391', '#4fd1c5', '#7aa2ff', '#b794f4'];
+var LEVEL_NAMES = ['启蒙识字', '小学语文', '初中语文', '高中语文'];
+
+var S = {
+  ready: false, running: false, pendingRestore: null,
+  status: null, info: null, step0: null, cur: null,
+  hist: { steps: [], loss: [], lr: [], valSteps: [], val: [], perLevel: [], tps: [], tpsSteps: [] },
+  snapshots: [], attn: null, emb: null,
+  idbOk: true, lastSaveAt: 0, dragging: false, lastCkptStep: 0, restoreSource: null
+};
+
+function $(id){ return document.getElementById(id); }
+var el = {};
+['beforeText','beforeMeta','curText','curStep','curMeta','promptInput','btnGen','btnSnap','btnResetPrompt',
+ 'lossChart','hpChart','levelChart','levelBoxes','attnCanvas','attnLabels','attnLayer','attnHead','btnAttn',
+ 'embCanvas','embLimit','btnEmb','kpiStep','kpiLoss','kpiVal','kpiLr','kpiTps','kpiState',
+ 'btnStart','btnPause','btnStep','btnReset','badgeState','badgeSave','paramCount','vocabSize','corpusVer',
+ 'stageBar','stageName','stageProg','curMode','curStage','weightSliders','levelTokenInfo',
+ 'hpLr','hpLrOut','hpBatch','hpBatchOut','hpTemp','hpTempOut','hpGenLen','hpGenLenOut','hpSampleInt','hpSampleIntOut','hpDrop','hpDropOut',
+ 'hpValInt','hpValIntOut','hpTotal','hpTotalOut','archSel','btnExport','btnImport','fileInput','ckptInfo',
+ 'milestones','snapshots','corpusInfo','toast','modalHost'
+].forEach(function(id){ el[id] = $(id); });
+
+/* ================= 工具 ================= */
+function disp(t){ return String(t === undefined || t === null ? '' : t).replace(/<unk>/g, '？'); }
+function setGenText(node, prompt, text){
+  node.innerHTML = '';
+  var sp = document.createElement('span');
+  sp.className = 'p';
+  sp.textContent = prompt || '';
+  node.appendChild(sp);
+  node.appendChild(document.createTextNode(disp(text)));
+}
+function fmt(n, d){ return (n === null || n === undefined || !isFinite(n)) ? '–' : (+n).toFixed(d === undefined ? 3 : d); }
+function toast(text, kind){
+  var d = document.createElement('div');
+  if (kind) d.className = kind;
+  d.textContent = text;
+  el.toast.appendChild(d);
+  setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, kind === 'err' ? 8000 : 4200);
+}
+function modal(opts){
+  el.modalHost.innerHTML = '';
+  var bg = document.createElement('div'); bg.className = 'modal-bg';
+  var box = document.createElement('div'); box.className = 'modal';
+  var h = document.createElement('h3'); h.textContent = opts.title;
+  var p = document.createElement('p'); p.textContent = opts.body || '';
+  var ctr = document.createElement('div'); ctr.className = 'controls';
+  box.appendChild(h); box.appendChild(p);
+  (opts.buttons || []).forEach(function(b){
+    var btn = document.createElement('button');
+    btn.textContent = b.label;
+    if (b.primary) btn.className = 'primary';
+    btn.onclick = function(){ el.modalHost.innerHTML = ''; if (b.onClick) b.onClick(); };
+    ctr.appendChild(btn);
+  });
+  box.appendChild(ctr); bg.appendChild(box); el.modalHost.appendChild(bg);
+}
+
+/* ================= Worker 传输（真实 Worker，失败时同线程回退） ================= */
+function bootTransport(){
+  return new Promise(function(resolve){
+    var src = $('zlm-worker-src').textContent;
+    var listeners = [], settled = false, real = null;
+    function deliver(m){ for (var i = 0; i < listeners.length; i++) listeners[i](m); }
+    function finish(t){
+      if (settled) return;
+      settled = true;
+      resolve({
+        mode: t.mode,
+        post: t.post,
+        terminate: t.terminate,
+        onMessage: function(cb){ listeners.push(cb); }
+      });
+    }
+    function useInline(){
+      var selfObj = { onmessage: null, postMessage: function(m){ setTimeout(function(){ deliver(m); }, 0); } };
+      try { new Function('self', src)(selfObj); }
+      catch (e){ console.error('inline worker failed', e); }
+      finish({ mode: 'inline', post: function(m){ setTimeout(function(){ if (selfObj.onmessage) selfObj.onmessage({ data: m }); }, 0); }, terminate: function(){} });
+    }
+    try {
+      if (typeof Worker === 'undefined' || !window.URL || !URL.createObjectURL){ useInline(); return; }
+      real = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+    } catch (e){ useInline(); return; }
+    real.onmessage = function(ev){
+      var d = ev.data;
+      if (!settled && d && d.type === 'pong'){
+        finish({ mode: 'worker', post: function(m){ real.postMessage(m); }, terminate: function(){ real.terminate(); } });
+        return;
+      }
+      deliver(d);
+    };
+    real.onerror = function(){ if (!settled){ try { real.terminate(); } catch (e){} useInline(); } };
+    real.postMessage({ type: 'ping' });
+    setTimeout(function(){ if (!settled){ try { real.terminate(); } catch (e){} useInline(); } }, 2500);
+  });
+}
+var W = null;
+function post(m){ if (W) W.post(m); }
+
+/* ================= IndexedDB ================= */
+var DB_NAME = 'zlm-lab-db', STORE = 'ckpt';
+function idbOpen(){
+  return new Promise(function(res, rej){
+    if (!window.indexedDB) return rej(new Error('IndexedDB 不可用'));
+    var r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = function(){ r.result.createObjectStore(STORE); };
+    r.onsuccess = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error || new Error('IndexedDB 打开失败')); };
+  });
+}
+function idbTx(mode, fn){
+  return idbOpen().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction(STORE, mode), store = tx.objectStore(STORE), req;
+      try { req = fn(store); } catch (e){ rej(e); return; }
+      tx.oncomplete = function(){ res(req ? req.result : undefined); };
+      tx.onerror = function(){ rej(tx.error || new Error('IndexedDB 事务失败')); };
+      tx.onabort = function(){ rej(tx.error || new Error('IndexedDB 事务中止')); };
+    });
+  });
+}
+function idbSave(json, meta){ return idbTx('readwrite', function(st){ return st.put({ json: json, meta: meta, at: Date.now() }, 'latest'); }); }
+function idbLoad(){ return idbTx('readonly', function(st){ return st.get('latest'); }); }
+function idbClear(){ return idbTx('readwrite', function(st){ return st.delete('latest'); }); }
+
+/* ================= 图表 ================= */
+function fit(canvas){
+  var dpr = window.devicePixelRatio || 1;
+  var w = Math.max(240, canvas.clientWidth || canvas.parentElement.clientWidth || 480);
+  var h = +(canvas.getAttribute('height') || 200);
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  canvas.style.height = h + 'px';
+  var g = canvas.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  return { g: g, w: w, h: h };
+}
+function drawEmpty(c, text){
+  c.g.fillStyle = '#5d6b80';
+  c.g.font = '12px system-ui';
+  c.g.fillText(text, 12, c.h / 2);
+}
+function grid(c, pad, xTicks, yTicks, xLabel, yLabel, yRight){
+  var g = c.g, i, x, y, n = yTicks.length;
+  g.strokeStyle = 'rgba(120,150,190,0.13)';
+  g.fillStyle = '#6b7b93';
+  g.font = '10px ui-monospace,monospace';
+  g.lineWidth = 1;
+  // 底部是较小的值，顶部是较大的值
+  for (i = 0; i < n; i++){
+    y = c.h - pad.b - (c.h - pad.t - pad.b) * i / Math.max(1, n - 1);
+    g.beginPath(); g.moveTo(pad.l, y); g.lineTo(c.w - pad.r, y); g.stroke();
+    g.textAlign = 'right'; g.fillText(yTicks[i], pad.l - 6, y + 3);
+  }
+  for (i = 0; i < xTicks.length; i++){
+    x = pad.l + (c.w - pad.l - pad.r) * i / Math.max(1, xTicks.length - 1);
+    g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, c.h - pad.b); g.stroke();
+    g.textAlign = 'center'; g.fillText(xTicks[i], x, c.h - pad.b + 13);
+  }
+  if (yRight){
+    g.textAlign = 'left'; g.fillStyle = 'rgba(246,173,85,0.75)';
+    var m = yRight.ticks.length;
+    for (i = 0; i < m; i++){
+      y = c.h - pad.b - (c.h - pad.t - pad.b) * i / Math.max(1, m - 1);
+      g.fillText(yRight.ticks[i], c.w - pad.r + 6, y + 3);
+    }
+  }
+  if (xLabel){ g.fillStyle = '#6b7b93'; g.textAlign = 'right'; g.fillText(xLabel, c.w - pad.r, c.h - 4); }
+  if (yLabel){ g.fillStyle = '#6b7b93'; g.textAlign = 'left'; g.fillText(yLabel, 4, pad.t - 1); }
+}
+function poly(g, pts, xr, yr, color, width, dash){
+  if (!pts.length) return;
+  g.save();
+  g.strokeStyle = color; g.lineWidth = width || 1.6; g.lineJoin = 'round';
+  g.setLineDash(dash || []);
+  g.beginPath();
+  for (var i = 0; i < pts.length; i++){
+    var x = xr(pts[i][0]), y = yr(pts[i][1]);
+    if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+  }
+  g.stroke();
+  g.restore();
+}
+function sampleDown(pts, maxN){
+  if (pts.length <= maxN) return pts;
+  var out = [], step = pts.length / maxN;
+  for (var i = 0; i < maxN; i++) out.push(pts[Math.floor(i * step)]);
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+function tickLabel(v, range){
+  if (v !== 0 && Math.abs(v) < 0.01) return v.toExponential(1);
+  if (range >= 100) return String(Math.round(v));
+  if (range >= 10) return v.toFixed(1);
+  return v.toFixed(2);
+}
+function niceTicks(min, max, n){
+  if (!isFinite(min) || !isFinite(max) || max === min){ max = min + 1; }
+  var out = [], range = max - min;
+  for (var i = 0; i <= n; i++) out.push(tickLabel(min + range * i / n, range));
+  return out;
+}
+
+function renderLoss(){
+  var c = fit(el.lossChart);
+  if (!S.hist.loss.length){ drawEmpty(c, '等待训练数据…'); return; }
+  var pad = { l: 46, r: 46, t: 12, b: 22 };
+  var xmax = Math.max(20, S.hist.steps[S.hist.steps.length - 1]);
+  var all = S.hist.loss.concat(S.hist.val);
+  var ymin = Math.min.apply(null, all), ymax = Math.max.apply(null, all);
+  var padY = (ymax - ymin) * 0.12 + 0.05;
+  ymin = Math.max(0, ymin - padY); ymax = ymax + padY;
+  var xr = function(x){ return pad.l + (c.w - pad.l - pad.r) * x / xmax; };
+  var yr = function(y){ return pad.t + (c.h - pad.t - pad.b) * (1 - (y - ymin) / (ymax - ymin)); };
+  var xt = [];
+  for (var i = 0; i <= 4; i++) xt.push(Math.round(xmax * i / 4));
+  grid(c, pad, xt, niceTicks(ymin, ymax, 4), '', 'Loss');
+  var trainPts = S.hist.loss.map(function(v, i){ return [S.hist.steps[i], v]; });
+  poly(c.g, sampleDown(trainPts, 900), xr, yr, 'rgba(79,209,197,0.85)', 1.3);
+  if (S.hist.val.length){
+    var valPts = S.hist.val.map(function(v, i){ return [S.hist.valSteps[i], v]; });
+    poly(c.g, valPts, xr, yr, '#7aa2ff', 2);
+    var last = valPts[valPts.length - 1];
+    c.g.fillStyle = '#7aa2ff';
+    c.g.beginPath(); c.g.arc(xr(last[0]), yr(last[1]), 3, 0, 6.3); c.g.fill();
+  }
+  // 阶段分隔线
+  var sl = S.status ? S.status.stageLength : 0;
+  if (sl){
+    for (var k = 1; k < 4; k++){
+      var x = xr(k * sl);
+      if (x > pad.l && x < c.w - pad.r){
+        c.g.strokeStyle = 'rgba(246,173,85,0.25)'; c.g.setLineDash([3, 3]);
+        c.g.beginPath(); c.g.moveTo(x, pad.t); c.g.lineTo(x, c.h - pad.b); c.g.stroke();
+        c.g.setLineDash([]);
+      }
+    }
+  }
+}
+
+function renderHp(){
+  var c = fit(el.hpChart);
+  if (!S.hist.lr.length){ drawEmpty(c, '学习率 / 吞吐量'); return; }
+  var pad = { l: 46, r: 52, t: 10, b: 20 };
+  var xmax = Math.max(20, S.hist.steps[S.hist.steps.length - 1]);
+  var lrMax = Math.max.apply(null, S.hist.lr) || 1;
+  var tpsMax = Math.max.apply(null, S.hist.tps.length ? S.hist.tps : [1]) || 1;
+  var xr = function(x){ return pad.l + (c.w - pad.l - pad.r) * x / xmax; };
+  var lrY = function(v){ return pad.t + (c.h - pad.t - pad.b) * (1 - v / (lrMax * 1.15)); };
+  var tpsY = function(v){ return pad.t + (c.h - pad.t - pad.b) * (1 - v / (tpsMax * 1.15)); };
+  var xt = [];
+  for (var i = 0; i <= 4; i++) xt.push(Math.round(xmax * i / 4));
+  grid(c, pad, xt, niceTicks(0, lrMax * 1.15, 2), '', 'LR', { ticks: niceTicks(0, tpsMax * 1.15, 2) });
+  var lrPts = S.hist.lr.map(function(v, i){ return [S.hist.steps[i], v]; });
+  poly(c.g, sampleDown(lrPts, 600), xr, lrY, '#f6ad55', 1.4);
+  if (S.hist.tps.length){
+    var tPts = S.hist.tps.map(function(v, i){ return [S.hist.tpsSteps[i], v]; });
+    poly(c.g, tPts, xr, tpsY, '#b794f4', 1.4, [4, 3]);
+  }
+}
+
+function renderLevels(){
+  var c = fit(el.levelChart);
+  var pad = { l: 46, r: 12, t: 12, b: 22 };
+  if (!S.hist.perLevel.length){ drawEmpty(c, '等待验证数据…'); return; }
+  var xmax = Math.max(20, S.hist.valSteps[S.hist.valSteps.length - 1]);
+  var all = [];
+  S.hist.perLevel.forEach(function(row){ all = all.concat(row); });
+  var ymin = Math.min.apply(null, all), ymax = Math.max.apply(null, all);
+  var padY = (ymax - ymin) * 0.15 + 0.05;
+  ymin = Math.max(0, ymin - padY); ymax += padY;
+  var xr = function(x){ return pad.l + (c.w - pad.l - pad.r) * x / xmax; };
+  var yr = function(y){ return pad.t + (c.h - pad.t - pad.b) * (1 - (y - ymin) / (ymax - ymin)); };
+  var xt = [];
+  for (var i = 0; i <= 4; i++) xt.push(Math.round(xmax * i / 4));
+  grid(c, pad, xt, niceTicks(ymin, ymax, 4), '', 'Loss');
+  for (var lv = 0; lv < 4; lv++){
+    var pts = S.hist.perLevel.map(function(row, i){ return [S.hist.valSteps[i], row[lv]]; }).filter(function(p){ return isFinite(p[1]); });
+    poly(c.g, pts, xr, yr, LEVEL_COLORS[lv], 1.8);
+    if (pts.length){
+      var last = pts[pts.length - 1];
+      c.g.fillStyle = LEVEL_COLORS[lv];
+      c.g.beginPath(); c.g.arc(xr(last[0]), yr(last[1]), 2.6, 0, 6.3); c.g.fill();
+    }
+  }
+}
+
+/* ================= Attention / Embedding ================= */
+function heatColor(v){
+  v = Math.max(0, Math.min(1, v));
+  var stops = [[13,19,29],[16,52,72],[24,104,110],[79,209,197],[246,224,120]];
+  var t = v * (stops.length - 1), i = Math.floor(t), f = t - i;
+  var a = stops[i], b = stops[Math.min(stops.length - 1, i + 1)];
+  return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * f) + ',' + Math.round(a[1] + (b[1] - a[1]) * f) + ',' + Math.round(a[2] + (b[2] - a[2]) * f) + ')';
+}
+function renderAttention(){
+  var canvas = el.attnCanvas, dpr = window.devicePixelRatio || 1;
+  var w = Math.max(200, canvas.clientWidth || 300), h = +(canvas.getAttribute('height') || 300);
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  canvas.style.height = h + 'px';
+  var g = canvas.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  var data = S.attn;
+  if (!data || !data.layers || !data.layers.length){
+    g.fillStyle = '#5d6b80'; g.font = '12px system-ui';
+    g.fillText('还没有注意力数据，点击“重新计算”。', 10, h / 2);
+    el.attnLabels.textContent = '';
+    return;
+  }
+  var li = Math.min(+el.attnLayer.value || 0, data.layers.length - 1);
+  var layer = data.layers[li];
+  var T = layer.T, H = layer.H;
+  var hi = Math.min(+el.attnHead.value || 0, H - 1);
+  var mat = layer.heads ? layer.heads[hi] : layer.data;
+  var cell = Math.min((w - 4) / T, (h - 4) / T);
+  var ox = Math.max(2, (w - T * cell) / 2), oy = 2;
+  for (var t = 0; t < T; t++){
+    for (var s = 0; s < T; s++){
+      var v = mat[t * T + s];
+      g.fillStyle = s <= t ? heatColor(Math.pow(v, 0.6)) : '#0b0f17';
+      g.fillRect(ox + s * cell, oy + t * cell, cell + 0.5, cell + 0.5);
+    }
+  }
+  // 字符标签
+  g.font = Math.max(7, Math.min(11, cell * 0.8)) + 'px system-ui';
+  g.fillStyle = '#9fb0c6'; g.textAlign = 'center';
+  var step = T > 48 ? 2 : 1;
+  for (var k = 0; k < T; k += step){
+    if (cell * step < 6) break;
+    g.fillText(data.chars[k] || '', ox + k * cell + cell / 2, oy + T * cell + Math.min(12, cell * 1.4));
+  }
+  el.attnLabels.textContent = 'Prompt：' + data.chars.join('') + '　（' + T + ' 个 token，Layer ' + (li + 1) + ' / Head ' + (hi + 1) + '）';
+  // 提示头部数量
+  var headSel = el.attnHead;
+  if (headSel.options.length !== H){
+    headSel.innerHTML = '';
+    for (var i = 0; i < H; i++){
+      var o = document.createElement('option'); o.value = i; o.textContent = 'Head ' + (i + 1);
+      headSel.appendChild(o);
+    }
+    headSel.value = Math.min(hi, H - 1);
+  }
+  var layerSel = el.attnLayer;
+  if (layerSel.options.length !== data.layers.length){
+    layerSel.innerHTML = '';
+    for (var j = 0; j < data.layers.length; j++){
+      var lo = document.createElement('option'); lo.value = j; lo.textContent = 'Layer ' + (j + 1);
+      layerSel.appendChild(lo);
+    }
+  }
+}
+function renderEmbedding(){
+  var canvas = el.embCanvas, dpr = window.devicePixelRatio || 1;
+  var w = Math.max(200, canvas.clientWidth || 300), h = +(canvas.getAttribute('height') || 300);
+  canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  canvas.style.height = h + 'px';
+  var g = canvas.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  var pts = S.emb && S.emb.points;
+  if (!pts || !pts.length){
+    g.fillStyle = '#5d6b80'; g.font = '12px system-ui';
+    g.fillText('还没有 Embedding 数据。', 10, h / 2);
+    return;
+  }
+  var xs = pts.map(function(p){ return p.x; }), ys = pts.map(function(p){ return p.y; });
+  var xmin = Math.min.apply(null, xs), xmax = Math.max.apply(null, xs);
+  var ymin = Math.min.apply(null, ys), ymax = Math.max.apply(null, ys);
+  var pad = 18;
+  var sx = function(v){ return pad + (w - 2 * pad) * (xmax === xmin ? 0.5 : (v - xmin) / (xmax - xmin)); };
+  var sy = function(v){ return pad + (h - 2 * pad) * (ymax === ymin ? 0.5 : 1 - (v - ymin) / (ymax - ymin)); };
+  g.strokeStyle = 'rgba(120,150,190,0.15)';
+  g.beginPath(); g.moveTo(w / 2, pad); g.lineTo(w / 2, h - pad); g.moveTo(pad, h / 2); g.lineTo(w - pad, h / 2); g.stroke();
+  g.font = '11px system-ui'; g.textAlign = 'center';
+  pts.forEach(function(p){
+    var x = sx(p.x), y = sy(p.y);
+    g.fillStyle = 'rgba(79,209,197,0.85)';
+    g.beginPath(); g.arc(x, y, 1.8, 0, 6.3); g.fill();
+    g.fillStyle = 'rgba(219,228,240,0.92)';
+    g.fillText(p.ch, x, y - 4);
+  });
+}
+
+/* ================= 渲染状态 ================= */
+function setKpis(st){
+  if (!st) return;
+  el.kpiStep.textContent = st.step;
+  el.kpiLoss.textContent = fmt(st.loss, 3);
+  el.kpiVal.textContent = st.val ? fmt(st.val.mean, 3) : '–';
+  el.kpiLr.textContent = (st.lr || 0).toExponential(2);
+  el.kpiTps.textContent = st.tps || '–';
+  el.kpiState.textContent = S.running ? '训练中' : (st.step >= st.totalSteps ? '已完成计划' : (st.step ? '已暂停' : '就绪'));
+  el.badgeState.textContent = el.kpiState.textContent;
+  el.badgeState.className = 'badge ' + (S.running ? 'ok' : (st.step ? '' : 'warn'));
+  el.paramCount.textContent = st.paramCount.toLocaleString();
+  el.vocabSize.textContent = st.vocabSize;
+  el.corpusVer.textContent = st.corpusVersion;
+  el.curStep.textContent = 'Step ' + st.step;
+  el.curMeta.textContent = st.step ? ('生成于 Step ' + (S.cur ? S.cur.step : st.step)) : '';
+  el.curStage.value = String(st.stage);
+  el.curMode.value = st.mode;
+  el.stageName.textContent = (st.stage + 1) + ' · ' + LEVEL_NAMES[st.stage];
+  el.stageProg.textContent = '本阶段 ' + Math.round(st.stageProgress * 100) + '% · ' + st.step + ' / ' + st.totalSteps + ' 步';
+  // 阶段条
+  var bar = el.stageBar;
+  if (bar.children.length !== 4){
+    bar.innerHTML = '';
+    for (var i = 0; i < 4; i++){
+      var d = document.createElement('div'); d.className = 'st';
+      d.appendChild(document.createElement('i'));
+      bar.appendChild(d);
+    }
+  }
+  for (var k = 0; k < 4; k++){
+    var fill = bar.children[k].firstChild;
+    var pct = k < st.stage ? 100 : (k === st.stage ? st.stageProgress * 100 : 0);
+    fill.style.width = pct + '%';
+  }
+  // 采样权重
+  if (!S.dragging){
+    for (var w = 0; w < 4; w++){
+      var inp = el['w' + w], out = el['w' + w + 'Out'];
+      if (inp){ inp.value = Math.round(st.weights[w] * 100); out.textContent = Math.round(st.weights[w] * 100) + '%'; }
+    }
+  }
+  el.levelTokenInfo.textContent = '已采样 Token：' + st.levelTokens.map(function(v, i){ return LEVEL_NAMES[i] + ' ' + v.toLocaleString(); }).join(' · ');
+  if (st.hp) syncHp(st.hp);
+  if (st.modelConfig){
+    el.archSel.value = (st.modelConfig.dModel === ARCHS.adv.dModel) ? 'adv' : 'teach';
+  }
+  if (st.val){
+    el.kpiVal.textContent = fmt(st.val.mean, 3);
+    renderLevelBoxes(st.val.perLevel);
+  }
+}
+function syncHp(hp){
+  el.hpLr.value = Math.round(hp.lr / 0.0005);
+  el.hpDrop.value = Math.round(hp.dropout * 100);
+  el.hpBatch.value = hp.batchSize;
+  el.hpTemp.value = Math.round(hp.temperature * 100);
+  el.hpGenLen.value = hp.genLength;
+  el.hpSampleInt.value = hp.sampleInterval;
+  el.hpValInt.value = hp.valInterval;
+  el.hpTotal.value = hp.totalSteps;
+  el.hpLrOut.textContent = hp.lr.toFixed(4);
+  el.hpDropOut.textContent = hp.dropout.toFixed(2);
+  el.hpBatchOut.textContent = hp.batchSize;
+  el.hpTempOut.textContent = hp.temperature.toFixed(2);
+  el.hpGenLenOut.textContent = hp.genLength;
+  el.hpSampleIntOut.textContent = hp.sampleInterval;
+  el.hpValIntOut.textContent = hp.valInterval;
+  el.hpTotalOut.textContent = hp.totalSteps;
+}
+function renderLevelBoxes(perLevel){
+  if (!perLevel) return;
+  if (el.levelBoxes.children.length !== 4){
+    el.levelBoxes.innerHTML = '';
+    for (var i = 0; i < 4; i++){
+      var d = document.createElement('div');
+      d.className = 'lv';
+      d.style.borderLeft = '3px solid ' + LEVEL_COLORS[i];
+      d.innerHTML = '<div class="name">' + LEVEL_NAMES[i] + '</div><div class="val">–</div><div class="w">–</div>';
+      el.levelBoxes.appendChild(d);
+    }
+  }
+  var st = S.status;
+  for (var k = 0; k < 4; k++){
+    var box = el.levelBoxes.children[k];
+    box.className = 'lv' + (st && st.stage === k ? ' active' : '');
+    box.style.borderLeftColor = LEVEL_COLORS[k];
+    box.children[1].textContent = fmt(perLevel[k], 3);
+    box.children[2].textContent = '采样比例 ' + (st ? Math.round(st.weights[k] * 100) : 0) + '%';
+  }
+}
+function renderSnapshots(){
+  if (!S.snapshots.length){
+    el.snapshots.innerHTML = '<div class="tiny dim">还没有快照。训练过程中会自动记录。</div>';
+    return;
+  }
+  var list = S.snapshots.slice(-24).reverse();
+  el.snapshots.innerHTML = '';
+  list.forEach(function(sn){
+    var d = document.createElement('div'); d.className = 'snap';
+    var b = document.createElement('b'); b.textContent = 'Step ' + sn.step;
+    d.appendChild(b);
+    d.appendChild(document.createTextNode('　' + (sn.prompt || '') + '　'));
+    var sp = document.createElement('span'); sp.className = 'dim';
+    sp.textContent = disp((sn.text || '').slice(0, 90));
+    d.appendChild(sp);
+    el.snapshots.appendChild(d);
+  });
+}
+function renderMilestones(){
+  var st = S.status;
+  if (!st) return;
+  var V = st.vocabSize || 1000, logV = Math.log(V);
+  var loss = S.hist.loss.length ? S.hist.loss.slice(-10).reduce(function(a, b){ return a + b; }, 0) / Math.min(10, S.hist.loss.length) : null;
+  var txt = S.cur ? S.cur.text : '';
+  var per = st.val ? st.val.perLevel : null;
+  var minVal = S.hist.val.length ? Math.min.apply(null, S.hist.val) : null;
+  var lastVal = S.hist.val.length ? S.hist.val[S.hist.val.length - 1] : null;
+  var items = [
+    { on: loss !== null && loss < logV * 0.9, text: 'Loss 明显低于随机猜测（' + logV.toFixed(2) + '），模型开始学到汉字分布' },
+    { on: loss !== null && loss < logV * 0.72, text: 'Loss 继续下降，开始掌握常见字词的搭配' },
+    { on: /[，。！？；]/.test(txt) && txt.length > 8, text: '生成文本中出现中文标点与多字片段（启发式）' },
+    { on: (txt.match(/[，、；]/g) || []).length > 0 && txt.length > 16, text: '生成文本中出现较长的字串与逗号（启发式）' },
+    { on: per && isFinite(per[0]) && isFinite(per[3]) && per[3] - per[0] > 0.3, text: '简单语料验证损失低于复杂语料（课程难度生效）' },
+    { on: minVal !== null && lastVal !== null && S.hist.val.length > 8 && lastVal > minVal + 0.05, text: '验证损失回升，可能开始过拟合（可导出进度观察）' }
+  ];
+  el.milestones.innerHTML = '';
+  items.forEach(function(it){
+    var li = document.createElement('li');
+    if (it.on) li.className = 'on';
+    var dot = document.createElement('span'); dot.className = 'dot';
+    var sp = document.createElement('span'); sp.textContent = it.text;
+    li.appendChild(dot); li.appendChild(sp);
+    el.milestones.appendChild(li);
+  });
+}
+function renderCorpus(){
+  if (!S.info){ el.corpusInfo.textContent = '–'; return; }
+  el.corpusInfo.innerHTML = '';
+  var head = document.createElement('div');
+  head.textContent = '语料版本 ' + S.info.version + ' · 共 ' + S.info.levels.reduce(function(a, l){ return a + l.chars; }, 0).toLocaleString() + ' 字';
+  el.corpusInfo.appendChild(head);
+  S.info.levels.forEach(function(lv, i){
+    var d = document.createElement('div');
+    d.style.marginTop = '6px';
+    d.innerHTML = '<b style="color:' + LEVEL_COLORS[i] + '">' + lv.name + '</b> · ' + lv.docs + ' 篇 / ' + lv.chars + ' 字<br><span class="dim">' + (lv.sample || '').slice(0, 46) + '…</span>';
+    el.corpusInfo.appendChild(d);
+  });
+}
+function updateButtons(){
+  el.btnStart.disabled = !S.ready || S.running;
+  el.btnPause.disabled = !S.ready || !S.running;
+  el.btnStep.disabled = !S.ready || S.running;
+  el.btnReset.disabled = !S.ready;
+  el.btnGen.disabled = !S.ready;
+  el.btnExport.disabled = !S.ready;
+}
+var drawPending = false;
+function scheduleDraw(){
+  if (drawPending) return;
+  drawPending = true;
+  requestAnimationFrame(function(){
+    drawPending = false;
+    renderLoss(); renderHp(); renderLevels();
+  });
+}
+
+/* ================= 消息处理 ================= */
+function resetLocalHistory(hist){
+  S.hist = { steps: [], loss: [], lr: [], valSteps: [], val: [], perLevel: [], tps: [], tpsSteps: [] };
+  if (!hist) return;
+  S.hist.steps = (hist.steps || []).slice();
+  S.hist.loss = (hist.train || []).slice();
+  S.hist.lr = (hist.lr || []).slice();
+  S.hist.valSteps = (hist.valSteps || []).slice();
+  S.hist.val = (hist.val || []).slice();
+  S.hist.perLevel = (hist.perLevel || []).map(function(r){ return r.slice(); });
+}
+function applyInit(msg){
+  S.ready = true;
+  S.running = false;
+  S.info = msg.info; S.step0 = msg.step0; S.snapshots = msg.snapshots || [];
+  S.status = msg.status;
+  resetLocalHistory(msg.history);
+  S.cur = { step: 0, prompt: S.step0 ? S.step0.prompt : DEFAULT_PROMPT, text: S.step0 ? S.step0.text : '–' };
+  if (S.step0) setGenText(el.beforeText, S.step0.prompt, S.step0.text); else el.beforeText.textContent = '–';
+  el.beforeMeta.textContent = '真实推理 · 温度 ' + (S.status ? S.status.hp.temperature.toFixed(2) : '');
+  setGenText(el.curText, S.cur.prompt, S.cur.text);
+  renderCorpus(); renderSnapshots(); renderMilestones();
+  setKpis(S.status); updateButtons(); scheduleDraw();
+  renderLevelBoxes(msg.status && msg.status.val ? msg.status.val.perLevel
+    : (S.hist.perLevel.length ? S.hist.perLevel[S.hist.perLevel.length - 1] : [NaN, NaN, NaN, NaN]));
+  post({ type: 'attention', prompt: el.promptInput.value || DEFAULT_PROMPT });
+  post({ type: 'embeddings', limit: +el.embLimit.value });
+}
+function onMessage(msg){
+  if (!msg || !msg.type) return;
+  switch (msg.type){
+    case 'ready':
+      applyInit(msg);
+      if (S.pendingRestore){
+        post({ type: 'restore', json: S.pendingRestore });
+        S.pendingRestore = null;
+      }
+      break;
+    case 'reset':
+      applyInit(msg);
+      el.ckptInfo.textContent = '已重置，本地自动保存的记录仍保留（可再次导出或导入）。';
+      toast('已重新初始化模型，训练从 Step 0 开始。');
+      break;
+    case 'restored':
+      S.ready = true;
+      S.running = false;
+      S.step0 = msg.step0; S.snapshots = msg.snapshots || [];
+      S.status = msg.status;
+      resetLocalHistory(msg.history);
+      S.cur = { step: msg.status.step, prompt: el.promptInput.value || DEFAULT_PROMPT, text: '' };
+      if (S.step0) setGenText(el.beforeText, S.step0.prompt, S.step0.text); else el.beforeText.textContent = '（该 Checkpoint 未保存 Step 0 结果）';
+      renderSnapshots(); setKpis(msg.status); updateButtons(); scheduleDraw();
+      renderLevelBoxes(msg.status.val ? msg.status.val.perLevel
+        : (S.hist.perLevel.length ? S.hist.perLevel[S.hist.perLevel.length - 1] : [NaN, NaN, NaN, NaN]));
+      post({ type: 'generate', prompt: el.promptInput.value || DEFAULT_PROMPT, reason: 'restore' });
+      post({ type: 'attention', prompt: el.promptInput.value || DEFAULT_PROMPT });
+      post({ type: 'embeddings', limit: +el.embLimit.value });
+      var stamp = new Date().toLocaleTimeString();
+      if (S.restoreSource === 'idb'){
+        el.badgeSave.textContent = '自动保存：Step ' + msg.status.step;
+        el.badgeSave.className = 'badge ok';
+        el.ckptInfo.textContent = '已从本地自动保存恢复：Step ' + msg.status.step + ' · ' + stamp;
+      } else {
+        el.ckptInfo.textContent = '已导入训练进度：Step ' + msg.status.step + ' · ' + stamp;
+      }
+      S.restoreSource = null;
+      toast('已恢复训练进度：Step ' + msg.status.step);
+      break;
+    case 'stats':
+      S.status = msg;
+      S.running = !!msg.running;
+      if (msg.losses && msg.losses.length){
+        for (var i = 0; i < msg.losses.length; i++){
+          S.hist.loss.push(msg.losses[i]);
+          S.hist.lr.push(msg.lrs[i]);
+          S.hist.steps.push(msg.lossSteps[i]);
+        }
+        if (S.hist.loss.length > 40000){
+          S.hist.loss = S.hist.loss.slice(-20000);
+          S.hist.lr = S.hist.lr.slice(-20000);
+          S.hist.steps = S.hist.steps.slice(-20000);
+        }
+      }
+      if (msg.tps){
+        S.hist.tps.push(msg.tps); S.hist.tpsSteps.push(msg.step);
+        if (S.hist.tps.length > 400){ S.hist.tps.shift(); S.hist.tpsSteps.shift(); }
+      }
+      setKpis(msg); updateButtons(); renderMilestones(); scheduleDraw();
+      if (msg.step % 50 === 0 && !S.attnPending){
+        S.attnPending = true;
+        post({ type: 'attention', prompt: el.promptInput.value || DEFAULT_PROMPT });
+      }
+      if (msg.step % 100 === 0 && !S.embPending){
+        S.embPending = true;
+        post({ type: 'embeddings', limit: +el.embLimit.value });
+      }
+      break;
+    case 'val':
+      S.hist.val.push(msg.mean);
+      S.hist.valSteps.push(msg.step);
+      S.hist.perLevel.push(msg.perLevel.slice());
+      renderLevelBoxes(msg.perLevel);
+      renderMilestones();
+      scheduleDraw();
+      break;
+    case 'generated':
+      S.cur = { step: msg.step, prompt: msg.prompt, text: msg.text };
+      setGenText(el.curText, msg.prompt, msg.text);
+      el.curStep.textContent = 'Step ' + msg.step;
+      el.curMeta.textContent = '生成于 Step ' + msg.step + ' · ' + msg.prompt;
+      if (msg.snapshot){
+        S.snapshots.push(msg.snapshot);
+        if (S.snapshots.length > 60) S.snapshots.shift();
+        renderSnapshots();
+      }
+      renderMilestones();
+      break;
+    case 'attention':
+      S.attnPending = false;
+      S.attn = msg.data; renderAttention();
+      break;
+    case 'embeddings':
+      S.embPending = false;
+      S.emb = msg.data; renderEmbedding();
+      break;
+    case 'checkpoint':
+      if (msg.auto) onAutoSave(msg);
+      else downloadCheckpoint(msg);
+      break;
+    case 'error':
+      toast(msg.message, 'err');
+      S.running = false;
+      if (S.status) setKpis(S.status);
+      updateButtons();
+      break;
+    case 'state':
+      S.running = !!msg.running;
+      if (S.status) setKpis(S.status);
+      updateButtons();
+      break;
+  }
+}
+
+/* ================= Checkpoint ================= */
+function onAutoSave(msg){
+  S.lastCkptStep = msg.step;
+  idbSave(msg.json, { step: msg.step }).then(function(){
+    S.idbOk = true;
+    S.lastSaveAt = Date.now();
+    el.badgeSave.textContent = '自动保存：Step ' + msg.step;
+    el.badgeSave.className = 'badge ok';
+    el.ckptInfo.textContent = '最近自动保存：Step ' + msg.step + ' · ' + new Date().toLocaleTimeString() + ' · ' + (msg.json.length / 1024 / 1024).toFixed(2) + ' MB';
+  }).catch(function(e){
+    S.idbOk = false;
+    el.badgeSave.textContent = '自动保存不可用';
+    el.badgeSave.className = 'badge bad';
+    el.ckptInfo.textContent = '本地自动保存失败：' + e.message + '。请使用“导出训练进度”手动保存。';
+  });
+}
+function downloadCheckpoint(msg){
+  try {
+    var blob = new Blob([msg.json], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'zlm-checkpoint-step' + msg.step + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    toast('已导出训练进度（Step ' + msg.step + '）。');
+    el.ckptInfo.textContent = '已导出：Step ' + msg.step + ' · ' + (msg.json.length / 1024 / 1024).toFixed(2) + ' MB';
+  } catch (e){ toast('导出失败：' + e.message, 'err'); }
+}
+
+/* ================= 绑定 ================= */
+function bind(){
+  el.btnStart.onclick = function(){ post({ type: 'start' }); };
+  el.btnPause.onclick = function(){ post({ type: 'pause' }); };
+  el.btnStep.onclick = function(){ post({ type: 'step', n: 1 }); };
+  el.btnReset.onclick = function(){
+    modal({
+      title: '重新开始训练？',
+      body: '当前模型的权重、优化器状态和训练曲线都会被丢弃。本地自动保存的记录仍会保留。',
+      buttons: [
+        { label: '取消' },
+        { label: '重新开始', primary: true, onClick: function(){ post({ type: 'reset', modelConfig: ARCHS[el.archSel.value] }); } }
+      ]
+    });
+  };
+  el.archSel.onchange = function(){
+    var key = el.archSel.value;
+    modal({
+      title: '切换模型配置？',
+      body: '改变模型架构需要重新初始化参数，当前训练进度会被丢弃。',
+      buttons: [
+        { label: '取消', onClick: function(){ el.archSel.value = S.status && S.status.modelConfig.dModel === ARCHS.adv.dModel ? 'adv' : 'teach'; } },
+        { label: '重新开始', primary: true, onClick: function(){ post({ type: 'reset', modelConfig: ARCHS[key] }); } }
+      ]
+    });
+  };
+  function doGen(reason){ post({ type: 'generate', prompt: el.promptInput.value || DEFAULT_PROMPT, reason: reason || 'manual' }); }
+  el.btnGen.onclick = function(){ doGen('manual'); };
+  el.btnSnap.onclick = function(){ doGen('snap'); toast('已用当前模型生成并记录一条快照。'); };
+  el.btnResetPrompt.onclick = function(){ el.promptInput.value = DEFAULT_PROMPT; post({ type: 'prompt', prompt: DEFAULT_PROMPT }); post({ type: 'generate', prompt: DEFAULT_PROMPT, reason: 'prompt' }); };
+  el.promptInput.onkeydown = function(e){ if (e.key === 'Enter') doGen('manual'); };
+  el.promptInput.onchange = function(){ post({ type: 'prompt', prompt: el.promptInput.value || DEFAULT_PROMPT }); };
+
+  el.btnAttn.onclick = function(){ post({ type: 'attention', prompt: el.promptInput.value || DEFAULT_PROMPT }); };
+  el.attnLayer.onchange = renderAttention;
+  el.attnHead.onchange = renderAttention;
+  el.btnEmb.onclick = function(){ post({ type: 'embeddings', limit: +el.embLimit.value }); };
+  el.embLimit.onchange = function(){ post({ type: 'embeddings', limit: +el.embLimit.value }); };
+
+  el.curMode.onchange = function(){ post({ type: 'curriculum', patch: { mode: el.curMode.value } }); };
+  el.curStage.onchange = function(){
+    el.curMode.value = 'manual';
+    post({ type: 'curriculum', patch: { mode: 'manual', stage: +el.curStage.value } });
+  };
+  // 采样比例滑块
+  el.weightSliders.innerHTML = '';
+  for (var i = 0; i < 4; i++){
+    (function(idx){
+      var row = document.createElement('div'); row.className = 'slider';
+      var lab = document.createElement('label'); lab.textContent = LEVEL_NAMES[idx];
+      var inp = document.createElement('input');
+      inp.type = 'range'; inp.min = 0; inp.max = 100; inp.step = 5; inp.value = idx === 0 ? 100 : 0;
+      inp.id = 'w' + idx;
+      var out = document.createElement('output'); out.id = 'w' + idx + 'Out'; out.textContent = inp.value + '%';
+      inp.oninput = function(){
+        out.textContent = inp.value + '%';
+        S.dragging = true;
+        var w = [0, 1, 2, 3].map(function(k){ return +el['w' + k].value; });
+        var sum = w[0] + w[1] + w[2] + w[3];
+        if (sum <= 0) return;
+        post({ type: 'curriculum', patch: { weights: w.map(function(x){ return x / sum; }) } });
+      };
+      inp.onchange = function(){ S.dragging = false; };
+      row.appendChild(lab); row.appendChild(inp); row.appendChild(out);
+      el.weightSliders.appendChild(row);
+      el['w' + idx] = inp; el['w' + idx + 'Out'] = out;
+    })(i);
+  }
+
+  el.hpLr.oninput = function(){ el.hpLrOut.textContent = (el.hpLr.value * 0.0005).toFixed(4); post({ type: 'hp', patch: { lr: el.hpLr.value * 0.0005 } }); };
+  el.hpDrop.oninput = function(){ el.hpDropOut.textContent = (el.hpDrop.value / 100).toFixed(2); post({ type: 'hp', patch: { dropout: el.hpDrop.value / 100 } }); };
+  el.hpBatch.oninput = function(){ el.hpBatchOut.textContent = el.hpBatch.value; post({ type: 'hp', patch: { batchSize: +el.hpBatch.value } }); };
+  el.hpTemp.oninput = function(){ el.hpTempOut.textContent = (el.hpTemp.value / 100).toFixed(2); post({ type: 'hp', patch: { temperature: el.hpTemp.value / 100 } }); };
+  el.hpGenLen.oninput = function(){ el.hpGenLenOut.textContent = el.hpGenLen.value; post({ type: 'hp', patch: { genLength: +el.hpGenLen.value } }); };
+  el.hpSampleInt.oninput = function(){ el.hpSampleIntOut.textContent = el.hpSampleInt.value; post({ type: 'hp', patch: { sampleInterval: +el.hpSampleInt.value } }); };
+  el.hpValInt.oninput = function(){ el.hpValIntOut.textContent = el.hpValInt.value; post({ type: 'hp', patch: { valInterval: +el.hpValInt.value } }); };
+  el.hpTotal.oninput = function(){
+    el.hpTotalOut.textContent = el.hpTotal.value;
+    var total = +el.hpTotal.value;
+    post({ type: 'hp', patch: { totalSteps: total, stageLength: Math.round(total / 4) } });
+  };
+
+  el.btnExport.onclick = function(){ post({ type: 'checkpoint' }); };
+  el.btnImport.onclick = function(){ el.fileInput.value = ''; el.fileInput.click(); };
+  el.fileInput.onchange = function(){
+    var f = el.fileInput.files && el.fileInput.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var txt = String(reader.result || '');
+      try {
+        var ck = JSON.parse(txt);
+        if (!ck || ck.format !== 'zlm-checkpoint') throw new Error('不是本页面导出的训练进度文件');
+        S.restoreSource = 'file';
+        post({ type: 'restore', json: txt });
+        toast('正在导入训练进度（Step ' + (ck.step || 0) + '）…');
+      } catch (e){ toast('导入失败：' + e.message, 'err'); }
+    };
+    reader.onerror = function(){ toast('读取文件失败', 'err'); };
+    reader.readAsText(f);
+  };
+  window.addEventListener('resize', scheduleDraw);
+}
+
+/* ================= 启动 ================= */
+function startWorker(restoreJson){
+  var cfg = ARCHS.teach, seed = 20240601, hp = null;
+  if (restoreJson){
+    try {
+      var ck = JSON.parse(restoreJson);
+      if (ck.modelConfig) cfg = ck.modelConfig;
+      if (ck.seed !== undefined) seed = ck.seed;
+      if (ck.hp) hp = ck.hp;
+    } catch (e){ /* 交给 worker 校验 */ }
+  }
+  S.pendingRestore = restoreJson || null;
+  bootTransport().then(function(t){
+    W = t;
+    document.body.dataset.transport = t.mode;
+    W.onMessage(onMessage);
+    if (t.mode === 'inline') toast('当前环境无法创建 Web Worker，已切换为同线程训练（界面可能略有卡顿）。', 'warn');
+    post({ type: 'init', modelConfig: cfg, seed: seed, hp: hp, prompt: DEFAULT_PROMPT, maxVocab: 1300 });
+  });
+}
+
+function boot(){
+  bind();
+  el.promptInput.value = DEFAULT_PROMPT;
+  updateButtons();
+  el.badgeState.textContent = '初始化中';
+  el.badgeState.className = 'badge warn';
+  idbLoad().then(function(rec){
+    S.idbOk = true;
+    if (rec && rec.json){
+      var meta = rec.meta || {};
+      var when = new Date(rec.at || Date.now()).toLocaleString();
+      modal({
+        title: '发现上次的训练进度',
+        body: 'Step ' + (meta.step || '?') + ' · 保存于 ' + when + '。可以继续上次训练，也可以重新开始。',
+        buttons: [
+          { label: '重新开始', onClick: function(){ S.restoreSource = null; startWorker(null); } },
+          { label: '继续上次训练', primary: true, onClick: function(){ S.restoreSource = 'idb'; startWorker(rec.json); } }
+        ]
+      });
+    } else {
+      startWorker(null);
+    }
+  }).catch(function(){
+    S.idbOk = false;
+    el.badgeSave.textContent = '自动保存不可用';
+    el.badgeSave.className = 'badge bad';
+    toast('当前环境不支持本地自动保存（IndexedDB 不可用），请使用“导出训练进度”手动保存。', 'warn');
+    startWorker(null);
+  });
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+})();
+</script>
+</body>
+</html>
