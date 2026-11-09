@@ -141,8 +141,8 @@ details.fold[open] summary{margin-bottom:8px}
       <div class="chart-legend">
         <span><i style="background:#4fd1c5"></i>Training Loss</span>
         <span><i style="background:#7aa2ff"></i>Validation Loss（四级平均）</span>
-        <span><i style="background:#f6ad55"></i>Learning Rate（右轴）</span>
-        <span><i style="background:#b794f4"></i>Throughput tok/s（右轴）</span>
+        <span><i style="background:#f6ad55"></i>Learning Rate（下方图 · 左轴）</span>
+        <span><i style="background:#b794f4"></i>Throughput tok/s（下方图 · 右轴）</span>
       </div>
     </section>
 
@@ -1923,12 +1923,19 @@ function idbLoad(){ return idbTx('readonly', function(st){ return st.get('latest
 function idbClear(){ return idbTx('readwrite', function(st){ return st.delete('latest'); }); }
 
 /* ================= 图表 ================= */
+// 设计高度只在首次读取并缓存在 __cssH 上：
+// canvas.height 赋值会同时改写 height 属性，若每次都重读就会按 dpr 指数放大。
+function cssHeight(canvas){
+  if (!canvas.__cssH) canvas.__cssH = +(canvas.getAttribute('height') || 200);
+  return canvas.__cssH;
+}
 function fit(canvas){
   var dpr = window.devicePixelRatio || 1;
   var w = Math.max(240, canvas.clientWidth || canvas.parentElement.clientWidth || 480);
-  var h = +(canvas.getAttribute('height') || 200);
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
+  var h = cssHeight(canvas);
+  var pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+  if (canvas.width !== pw) canvas.width = pw;
+  if (canvas.height !== ph) canvas.height = ph;
   canvas.style.height = h + 'px';
   var g = canvas.getContext('2d');
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1938,7 +1945,9 @@ function fit(canvas){
 function drawEmpty(c, text){
   c.g.fillStyle = '#5d6b80';
   c.g.font = '12px system-ui';
-  c.g.fillText(text, 12, c.h / 2);
+  c.g.textAlign = 'center';
+  c.g.fillText(text, c.w / 2, Math.min(c.h / 2, 72));
+  c.g.textAlign = 'left';
 }
 function grid(c, pad, xTicks, yTicks, xLabel, yLabel, yRight){
   var g = c.g, i, x, y, n = yTicks.length;
@@ -2014,7 +2023,7 @@ function renderLoss(){
   var yr = function(y){ return pad.t + (c.h - pad.t - pad.b) * (1 - (y - ymin) / (ymax - ymin)); };
   var xt = [];
   for (var i = 0; i <= 4; i++) xt.push(Math.round(xmax * i / 4));
-  grid(c, pad, xt, niceTicks(ymin, ymax, 4), '', 'Loss');
+  grid(c, pad, xt, niceTicks(ymin, ymax, 4), '', '');
   var trainPts = S.hist.loss.map(function(v, i){ return [S.hist.steps[i], v]; });
   poly(c.g, sampleDown(trainPts, 900), xr, yr, 'rgba(79,209,197,0.85)', 1.3);
   if (S.hist.val.length){
@@ -2050,7 +2059,7 @@ function renderHp(){
   var tpsY = function(v){ return pad.t + (c.h - pad.t - pad.b) * (1 - v / (tpsMax * 1.15)); };
   var xt = [];
   for (var i = 0; i <= 4; i++) xt.push(Math.round(xmax * i / 4));
-  grid(c, pad, xt, niceTicks(0, lrMax * 1.15, 2), '', 'LR', { ticks: niceTicks(0, tpsMax * 1.15, 2) });
+  grid(c, pad, xt, niceTicks(0, lrMax * 1.15, 2), '', '', { ticks: niceTicks(0, tpsMax * 1.15, 2) });
   var lrPts = S.hist.lr.map(function(v, i){ return [S.hist.steps[i], v]; });
   poly(c.g, sampleDown(lrPts, 600), xr, lrY, '#f6ad55', 1.4);
   if (S.hist.tps.length){
@@ -2073,7 +2082,7 @@ function renderLevels(){
   var yr = function(y){ return pad.t + (c.h - pad.t - pad.b) * (1 - (y - ymin) / (ymax - ymin)); };
   var xt = [];
   for (var i = 0; i <= 4; i++) xt.push(Math.round(xmax * i / 4));
-  grid(c, pad, xt, niceTicks(ymin, ymax, 4), '', 'Loss');
+  grid(c, pad, xt, niceTicks(ymin, ymax, 4), '', '');
   for (var lv = 0; lv < 4; lv++){
     var pts = S.hist.perLevel.map(function(row, i){ return [S.hist.valSteps[i], row[lv]]; }).filter(function(p){ return isFinite(p[1]); });
     poly(c.g, pts, xr, yr, LEVEL_COLORS[lv], 1.8);
@@ -2095,7 +2104,7 @@ function heatColor(v){
 }
 function renderAttention(){
   var canvas = el.attnCanvas, dpr = window.devicePixelRatio || 1;
-  var w = Math.max(200, canvas.clientWidth || 300), h = +(canvas.getAttribute('height') || 300);
+  var w = Math.max(200, canvas.clientWidth || 300), h = cssHeight(canvas);
   canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
   canvas.style.height = h + 'px';
   var g = canvas.getContext('2d');
@@ -2152,7 +2161,7 @@ function renderAttention(){
 }
 function renderEmbedding(){
   var canvas = el.embCanvas, dpr = window.devicePixelRatio || 1;
-  var w = Math.max(200, canvas.clientWidth || 300), h = +(canvas.getAttribute('height') || 300);
+  var w = Math.max(200, canvas.clientWidth || 300), h = cssHeight(canvas);
   canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
   canvas.style.height = h + 'px';
   var g = canvas.getContext('2d');
